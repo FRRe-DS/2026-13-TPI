@@ -18,13 +18,21 @@ class SolicitudViaje(BaseModel):
     destino: str
     tipo_vehiculo: str
 
+class RespuestaSolicitud(BaseModel):
+    mensaje: str
+    id: int
+    estado: str
 
 @app.get("/")
 def inicio():
     return {"mensaje": "API del Grupo 13 - Modulo M5"}
 
 
-@app.post("/solicitudes", status_code=201)
+@app.post(
+    "/solicitudes",
+    status_code=201,
+    response_model=RespuestaSolicitud
+)
 def crear_solicitud(
     solicitud: SolicitudViaje,
     db: Session = Depends(obtener_db)

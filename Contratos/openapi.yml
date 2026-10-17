@@ -1,0 +1,82 @@
+
+openapi: 3.1.0
+
+info:
+  title: DS 2026 API
+  description: |
+    API de Solicitud y Despacho
+  version: 1.0.0
+
+paths:
+  /solicitudes:
+    post:
+      summary: Crear una solicitud de viaje
+      description: Registra una nueva solicitud de viaje con estado pendiente.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - origen
+                - destino
+                - tipo_vehiculo
+              properties:
+                origen:
+                  type: string
+                destino:
+                  type: string
+                tipo_vehiculo:
+                  type: string
+
+      responses:
+        '201':
+          description: Solicitud creada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - mensaje
+                  - id
+                  - estado
+                properties:
+                  mensaje:
+                    type: string
+                  id:
+                    type: integer
+                  estado:
+                    type: string
+
+        '422':
+          description: Error de validación de los datos enviados
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - detail
+                properties:
+                  detail:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - loc
+                        - msg
+                        - type
+                      properties:
+                        loc:
+                          type: array
+                          items:
+                            type: 
+                              - string
+                              - integer
+                        msg:
+                          type: string
+                        type:
+                          type: string
+                        input:
+                          description: Valor recibido que produjo el error
