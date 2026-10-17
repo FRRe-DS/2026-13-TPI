@@ -1,6 +1,8 @@
-from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String
+from datetime import datetime, timezone
+from uuid import uuid4
+
+from sqlalchemy import DateTime, Float, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -11,11 +13,24 @@ class Base(DeclarativeBase):
 class Solicitud(Base):
     __tablename__ = "solicitudes"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    origen: Mapped[str] = mapped_column(String(200))
-    destino: Mapped[str] = mapped_column(String(200))
+    solicitud_id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+
+    cliente_id: Mapped[str] = mapped_column(String(36))
+
+    origen_latitud: Mapped[float] = mapped_column(Float)
+    origen_longitud: Mapped[float] = mapped_column(Float)
+
+    destino_latitud: Mapped[float] = mapped_column(Float)
+    destino_longitud: Mapped[float] = mapped_column(Float)
+
     tipo_vehiculo: Mapped[str] = mapped_column(String(20))
-    estado: Mapped[str] = mapped_column(String(30), default="pendiente")
+
+    estado: Mapped[str] = mapped_column(
+        String(30), default="PENDIENTE"
+    )
+
     fecha_creacion: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)

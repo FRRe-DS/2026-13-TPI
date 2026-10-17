@@ -50,19 +50,21 @@ Nuestro grupo tiene asignado el **Módulo M5 — Solicitud y Despacho**, respons
 | RF-5.8 | Sin disponibilidad |
 | RF-5.9 | Trazabilidad del despacho |
 
-Estos requerimientos corresponden al alcance funcional general del módulo M5. Su implementación se realizará progresivamente según las entregas establecidas por la cátedra.
+Estos requerimientos corresponden al alcance funcional general del módulo M5. Su implementación se realizará progresivamente según las entregas establecidas en el Readme 2026-TPI.
 
 ### Integración con otros módulos
 
 El módulo M5 deberá comunicarse con los siguientes servicios:
 
-- **M2 — Clientes:** información del cliente.
-- **M3 — Conductores y Vehículos:** habilitación de conductores y vehículos.
-- **M4 — Ubicación y Disponibilidad:** búsqueda de conductores cercanos y disponibles.
-- **M6 — Viajes y Ciclo de Vida:** coordinación de la asignación y el inicio del ciclo del viaje.
-- **M9 — Reservas de Viajes:** activación de solicitudes provenientes de reservas.
+- **M2 — Clientes:** consulta de identificación y habilitación del cliente.
+- **M3 — Conductores y Vehículos:** consulta de habilitación, disponibilidad general y vehículo activo del conductor.
+- **M4 — Ubicación y Disponibilidad:** búsqueda de conductores cercanos y gestión de bloqueos temporales.
+- **M6 — Viajes y Ciclo de Vida:** creación del viaje después de confirmar la asignación.
+- **M9 — Reservas de Viajes:** activación de solicitudes provenientes de reservas, evitando solicitudes duplicadas.
 
-La integración entre módulos se realizará mediante APIs y eventos, respetando la independencia y propiedad de los datos de cada servicio.
+Los intercambios de datos con M2, M3 y M4 fueron acordados entre los equipos. Las propuestas para M6 y M9 están pendientes de confirmación.
+
+La implementación de la comunicación real entre módulos queda pendiente para próximas etapas, según el alcance definido por la cátedra.
 
 ### Estructura del proyecto
 
@@ -72,6 +74,8 @@ app/
     solicitud.py
   database.py
   main.py
+Contratos/
+  openapi.yml
 tests/
   conftest.py
   test_main.py
@@ -80,6 +84,7 @@ compose.yaml
 crear_tablas.py
 requirements.txt
 .env.example
+README.md
 ```
 
 ### Ejecución del proyecto
@@ -97,7 +102,7 @@ docker compose up -d --build
 4. Crear las tablas de la base de datos, si todavía no existen:
 
 ```bash
-docker docker compose exec api python crear_tablas.py
+docker compose exec api python crear_tablas.py
 ```
 
 5. Acceder a la documentación interactiva de la API:
@@ -111,7 +116,16 @@ La API utiliza el puerto `8000` y MySQL se encuentra disponible desde la computa
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/` | Devuelve un mensaje de bienvenida del módulo M5 |
-| POST | `/solicitudes` | Registra una solicitud de viaje con origen, destino y tipo de vehículo |
+| POST | `/solicitudes` | Registra una solicitud de viaje con identificador del cliente, coordenadas de origen y destino y tipo de vehículo |
+
+El endpoint `POST /solicitudes` recibe los siguientes atributos:
+
+- `cliente_id`: identificador UUID del cliente.
+- `origen_latitud` y `origen_longitud`: coordenadas del punto de origen.
+- `destino_latitud` y `destino_longitud`: coordenadas del destino.
+- `tipo_vehiculo`: `AUTO` o `MOTO`.
+
+Cuando la solicitud se registra correctamente, la API devuelve el código HTTP `201`, un `solicitud_id` generado automáticamente y el estado inicial `PENDIENTE`.
 
 Actualmente, la creación de solicitudes constituye una implementación inicial del requerimiento **RF-5.1**. Todavía no representa el flujo completo de solicitud y despacho.
 
@@ -119,7 +133,14 @@ Actualmente, la creación de solicitudes constituye una implementación inicial 
 
 El módulo utiliza **MySQL** para almacenar las solicitudes de viaje mediante SQLAlchemy.
 
-Cada solicitud registrada contiene un identificador, origen, destino, tipo de vehículo, estado y fecha de creación.
+Cada solicitud registrada contiene:
+
+- `solicitud_id`: identificador UUID generado automáticamente.
+- `cliente_id`: identificador del cliente.
+- Coordenadas de origen y destino.
+- `tipo_vehiculo`: tipo de vehículo solicitado.
+- `estado`: inicialmente `PENDIENTE`.
+- `fecha_creacion`: fecha y hora de registro.
 
 La base de datos utiliza un volumen de Docker para conservar la información almacenada.
 
@@ -142,9 +163,15 @@ Las pruebas de integración requieren que MySQL esté en funcionamiento y que la
 
 ### Contrato OpenAPI
 
-El contrato de comunicación del módulo M5 se documentará en el archivo `contratos/m5_solicitud/openapi.yml` del repositorio general de la cátedra.
+El contrato OpenAPI de los endpoints implementados se encuentra en:
 
-Este contrato deberá mantenerse consistente con los endpoints implementados por nuestro servicio.
+`Contratos/openapi.yml`
+
+Este archivo documenta la estructura de las solicitudes, las respuestas y los errores de validación.
+
+La especificación se mantiene consistente con la implementación de FastAPI y fue verificada mediante Swagger Editor.
+
+La publicación del contrato correspondiente en el repositorio general de la cátedra queda pendiente de coordinación.
 
 ### Estado del proyecto
 
@@ -153,12 +180,14 @@ Este contrato deberá mantenerse consistente con los endpoints implementados por
 Hasta el momento se implementaron:
 
 - Estructura inicial de la API con FastAPI.
-- Endpoint básico para registrar solicitudes de viaje.
+- Endpoint para registrar solicitudes de viaje con UUID y coordenadas.
+- Validación de los tipos de vehículo `AUTO` y `MOTO`.
 - Persistencia de solicitudes en MySQL mediante SQLAlchemy.
 - Ejecución de FastAPI y MySQL mediante Docker Compose.
 - Pruebas automatizadas del endpoint de inicio y de creación de solicitudes.
+- Contrato OpenAPI del endpoint implementado.
 
-Continúan pendientes las funcionalidades de despacho, búsqueda de conductores, gestión de ofertas, asignación única y demás requerimientos.
+Continúan pendientes las funcionalidades de despacho, búsqueda de conductores, gestión de ofertas, asignación única y comunicación real con los demás módulos.
 
 ---
 
