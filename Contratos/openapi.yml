@@ -1,0 +1,106 @@
+
+openapi: 3.1.0
+
+info:
+  title: API M5 - Solicitud y Despacho
+  description: API del Grupo 13 para registrar solicitudes de viaje.
+  version: 0.1.0
+
+paths:
+  /solicitudes:
+    post:
+      summary: Crear una solicitud de viaje
+      description: Registra una nueva solicitud con estado PENDIENTE.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cliente_id
+                - origen_latitud
+                - origen_longitud
+                - destino_latitud
+                - destino_longitud
+                - tipo_vehiculo
+              properties:
+                cliente_id:
+                  type: string
+                  format: uuid
+                origen_latitud:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                origen_longitud:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                destino_latitud:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                destino_longitud:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                tipo_vehiculo:
+                  type: string
+                  enum:
+                  - AUTO
+                  - MOTO
+                  description: Tipo de vehículo solicitado.
+
+      responses:
+        '201':
+          description: Solicitud creada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - mensaje
+                  - solicitud_id
+                  - estado
+                properties:
+                  mensaje:
+                    type: string
+                  solicitud_id:
+                    type: string
+                    format: uuid
+                  estado:
+                    type: string
+                    enum:
+                      - PENDIENTE
+
+        '422':
+          description: Error de validación de los datos enviados
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - detail
+                properties:
+                  detail:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - loc
+                        - msg
+                        - type
+                      properties:
+                        loc:
+                          type: array
+                          items:
+                            type:
+                              - string
+                              - integer
+                        msg:
+                          type: string
+                        type:
+                          type: string
+                        input:
+                          description: Valor recibido que produjo el error
