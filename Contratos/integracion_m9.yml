@@ -1,0 +1,111 @@
+
+openapi: 3.1.0
+
+info:
+  title: M5 - Integración con M9
+  description: >
+    Propuesta de contrato para activar reservas desde M9.
+    La ruta y los códigos de respuesta están pendientes
+    de confirmación entre los equipos.
+    Esta operación todavía no está implementada.
+  version: 0.1.0
+
+paths:
+  /reservas/activar:
+    post:
+      summary: Activar una reserva
+      description: >
+        Recibe los datos de una reserva y genera una solicitud
+        de despacho. Los reintentos de la misma reserva no
+        deberán generar solicitudes duplicadas.
+
+      operationId: activarReserva
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reserva_id
+                - cliente_id
+                - origen_latitud
+                - origen_longitud
+                - destino_latitud
+                - destino_longitud
+                - tipo_vehiculo
+              properties:
+                reserva_id:
+                  type: string
+                  format: uuid
+                cliente_id:
+                  type: string
+                  format: uuid
+                origen_latitud:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                origen_longitud:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                destino_latitud:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                destino_longitud:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                tipo_vehiculo:
+                  type: string
+                  enum:
+                    - AUTO
+                    - MOTO
+
+      responses:
+        '201':
+          description: Solicitud creada a partir de la reserva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaActivacion'
+
+        '200':
+          description: >
+            La reserva ya había sido activada.
+            Se devuelve la solicitud existente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaActivacion'
+
+        '422':
+          description: Datos de entrada inválidos
+
+        '500':
+          description: Error interno al registrar la solicitud
+
+        '503':
+          description: Servicio temporalmente no disponible
+
+components:
+  schemas:
+    RespuestaActivacion:
+      type: object
+      required:
+        - reserva_id
+        - solicitud_id
+        - estado
+      properties:
+        reserva_id:
+          type: string
+          format: uuid
+        solicitud_id:
+          type: string
+          format: uuid
+        estado:
+          type: string
+          enum:
+            - PENDIENTE

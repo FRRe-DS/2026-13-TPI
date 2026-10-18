@@ -1,0 +1,52 @@
+
+openapi: 3.1.0
+
+info:
+  title: Integración M5 con M2 - Clientes
+  description: >
+    Propuesta de contrato para consultar la habilitación
+    de un cliente. La ruta HTTP y las respuestas de error
+    están pendientes de confirmación con el equipo M2.
+    Esta integración todavía no está implementada.
+  version: 0.1.0
+
+paths:
+  /clientes/{cliente_id}/habilitacion:
+    get:
+      summary: Consultar habilitación de un cliente
+      operationId: consultarHabilitacionCliente
+
+      parameters:
+        - name: cliente_id
+          in: path
+          required: true
+          description: Identificador del cliente
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+        '200':
+          description: Estado de habilitación del cliente
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - cliente_id
+                  - habilitado
+                properties:
+                  cliente_id:
+                    type: string
+                    format: uuid
+                  habilitado:
+                    type: boolean
+
+        '404':
+          description: Cliente no encontrado
+
+        '422':
+          description: Identificador de cliente inválido
+
+        '503':
+          description: Servicio temporalmente no disponible
