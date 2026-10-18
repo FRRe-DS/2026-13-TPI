@@ -62,6 +62,7 @@ La base de datos utiliza un volumen persistente para conservar las solicitudes r
 
 
 
+```mermaid
 flowchart TB
     M2["M2 - Clientes"]
     M3["M3 - Conductores y Vehículos"]
@@ -78,13 +79,15 @@ flowchart TB
         LOG --> DB
     end
 
-    M2 <-.-> API
-    M3 <-.-> API
-    M4 <-.-> API
-    M9 <-.-> API
-    API <-.-> M6
+    M2 <--> API
+    M3 <--> API
+    M4 <--> API
+    M9 <--> API
+    API <--> M6
 
     classDef external fill:#e9eef8,stroke:#7185aa,color:#17263c
     classDef internal fill:#e5f4eb,stroke:#4e9870,color:#173d29
+
     class M2,M3,M4,M6,M9 external
     class API,LOG,DB internal
+```
