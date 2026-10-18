@@ -1,0 +1,40 @@
+name: tpdesarrollo
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: m5_mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: m5_db
+      MYSQL_USER: m5_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  api:
+    build: .
+    container_name: m5_api
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: m5_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: m5_db
+
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
