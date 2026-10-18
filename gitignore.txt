@@ -1,9 +1,0 @@
-# Entorno virtual de Python
-.venv/
-
-# Archivos temporales de Python
-__pycache__/
-*.pyc
-
-# Variables de entorno y credenciales
-.env
