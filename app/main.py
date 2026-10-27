@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import obtener_db
 from app.models.solicitud import Solicitud
+from app.routers import oferta
 
 
 app = FastAPI(
@@ -15,6 +16,7 @@ app = FastAPI(
     version="0.1.0"
 )
 
+app.include_router(oferta.router)
 
 class SolicitudViaje(BaseModel):
     cliente_id: UUID

@@ -85,3 +85,40 @@ def test_rechazar_coordenadas_invalidas():
     respuesta = client.post("/solicitudes", json=datos)
 
     assert respuesta.status_code == 422
+
+def test_crear_oferta_exitosa():
+    datos_solicitud = {
+        "cliente_id": "550e8400-e29b-41d4-a716-446655440000",
+        "origen_latitud": -27.4512,
+        "origen_longitud": -58.9866,
+        "destino_latitud": -27.4601,
+        "destino_longitud": -58.9735,
+        "tipo_vehiculo": "AUTO"
+    }
+    res_solicitud = client.post("/solicitudes", json=datos_solicitud)
+    assert res_solicitud.status_code == 201
+    solicitud_id = res_solicitud.json()["solicitud_id"]
+
+    # Probar la creación de la oferta asociada
+    datos_oferta = {
+        "id_solicitud": solicitud_id,
+        "conductor_id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        "tiempo_expiracion_seg": 30
+    }
+    respuesta = client.post("/ofertas/", json=datos_oferta)
+
+    # 3. Validar estado y estructura de la respuesta
+    assert respuesta.status_code == 201
+    resultado = respuesta.json()
+    assert resultado["id_solicitud"] == solicitud_id
+    assert resultado["conductor_id"] == datos_oferta["conductor_id"]
+    assert resultado["estado"] == "PENDIENTE"
+    assert "id_oferta" in resultado
+    assert "fecha_expiracion" in resultado
+
+
+def test_rechazar_oferta_datos_incompletos():
+    # Verificación de validación al omitir campos obligatorios
+    respuesta = client.post("/ofertas/", json={"tiempo_expiracion_seg": 30})
+    assert respuesta.status_code == 422
+
