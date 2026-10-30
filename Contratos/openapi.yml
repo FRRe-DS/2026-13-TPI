@@ -1,4 +1,3 @@
-
 openapi: 3.1.0
 
 info:
@@ -48,12 +47,12 @@ paths:
                 tipo_vehiculo:
                   type: string
                   enum:
-                  - AUTO
-                  - MOTO
+                    - AUTO
+                    - MOTO
                   description: Tipo de vehículo solicitado.
 
       responses:
-        '201':
+        "201":
           description: Solicitud creada correctamente
           content:
             application/json:
@@ -74,7 +73,7 @@ paths:
                     enum:
                       - PENDIENTE
 
-        '422':
+        "422":
           description: Error de validación de los datos enviados
           content:
             application/json:
