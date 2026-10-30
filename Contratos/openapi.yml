@@ -103,6 +103,52 @@ paths:
                           type: string
                         input:
                           description: Valor recibido que produjo el error
+  /ofertas/:
+    post:
+      summary: Crear oferta con expiracion (RF 5.4)
+      description: Registra una nueva oferta enviada a un conductor asignando una fecha de expiracion.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id_solicitud
+                - conductor_id
+                - tiempo_expiracion_seg
+              properties:
+                id_solicitud:
+                  type: string
+                  format: uuid
+                  description: ID de la solicitud asociada
+                conductor_id:
+                  type: string
+                  format: uuid
+                  description: ID del conductor destinatario
+                tiempo_expiracion_seg:
+                  type: integer
+                  minimum: 1
+                  default: 30
+                  description: Tiempo en segundos para que la oferta expire
+      responses:
+        "201":
+          description: Oferta creada con exito
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Oferta"
+        "422":
+          description: Error de validacion en los datos enviados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: array
+                    items:
+                      type: object
 
   /ofertas/{id_oferta}/respuesta:
     patch:
@@ -143,7 +189,7 @@ paths:
                   description: Acción a tomar sobre la oferta
 
       responses:
-        '200':
+        "200":
           description: Oferta respondida correctamente
           content:
             application/json:
@@ -175,7 +221,7 @@ paths:
                   mensaje:
                     type: string
 
-        '403':
+        "403":
           description: El cliente no es el dueño de la solicitud asociada
           content:
             application/json:
@@ -185,7 +231,7 @@ paths:
                   detail:
                     type: string
 
-        '404':
+        "404":
           description: Oferta o solicitud no encontrada
           content:
             application/json:
@@ -195,7 +241,7 @@ paths:
                   detail:
                     type: string
 
-        '409':
+        "409":
           description: La oferta ya fue respondida anteriormente
           content:
             application/json:
@@ -205,7 +251,7 @@ paths:
                   detail:
                     type: string
 
-        '422':
+        "422":
           description: Error de validación de los datos enviados
           content:
             application/json:
@@ -227,3 +273,74 @@ paths:
                           type: string
                         type:
                           type: string
+components:
+  schemas:
+    Oferta:
+      type: object
+      description: Entidad de oferta enviada a un conductor.
+      required:
+        - id_oferta
+        - id_solicitud
+        - conductor_id
+        - fecha_envio
+        - fecha_expiracion
+        - estado
+      properties:
+        id_oferta:
+          type: string
+          format: uuid
+          description: Identificador único de la oferta (UUID)
+        id_solicitud:
+          type: string
+          format: uuid
+          description: Identificador de la solicitud vinculada
+        conductor_id:
+          type: string
+          format: uuid
+          description: Identificador del conductor ofertado
+        fecha_envio:
+          type: string
+          format: date-time
+          description: Timestamp de creación y envío
+        fecha_expiracion:
+          type: string
+          format: date-time
+          description: Timestamp límite para aceptar la oferta
+        estado:
+          type: string
+          enum:
+            - PENDIENTE
+            - ACEPTADA
+            - RECHAZADA
+            - EXPIRADA
+          description: Estado del ciclo de vida de la oferta
+
+    HistorialDespacho:
+      type: object
+      description: Entidad para el registro de cambios de estado del viaje.
+      required:
+        - id_historial
+        - id_solicitud
+        - estado_nuevo
+        - fecha_cambio
+      properties:
+        id_historial:
+          type: string
+          format: uuid
+          description: Identificador único del evento de historial
+        id_solicitud:
+          type: string
+          format: uuid
+          description: Identificador de la solicitud asociada
+        estado_anterior:
+          type:
+            - string
+            - "null"
+          description: Estado previo de la solicitud (nulo si es la creación inicial)
+        estado_nuevo:
+          type: string
+          description: Nuevo estado que adquiere la solicitud
+        fecha_cambio:
+          type: string
+          format: date-time
+          description: Timestamp del evento de cambio
