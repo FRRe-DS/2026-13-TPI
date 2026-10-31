@@ -1,6 +1,8 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, ConfigDict
+from uuid import UUID
+
 
 # Crear oferta
 class OfertaCreate(BaseModel):
@@ -18,3 +20,8 @@ class OfertaResponse(BaseModel):
     estado: str
 
     model_config = ConfigDict(from_attributes=True)
+
+# Responder una oferta (RF-5.5)
+class RespuestaOferta(BaseModel):
+    cliente_id: UUID
+    accion: Literal["ACEPTAR", "RECHAZAR"]

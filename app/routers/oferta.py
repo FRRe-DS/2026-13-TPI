@@ -6,7 +6,8 @@ from app.models.solicitud import Solicitud
 
 from app.database import obtener_db
 from app.models.oferta import Oferta
-from app.schemas.oferta import OfertaCreate, OfertaResponse
+from app.schemas.oferta import OfertaCreate, OfertaResponse, RespuestaOferta
+from app.services.asignacion import asignar_conductor, rechazar_oferta
 
 router = APIRouter(prefix="/ofertas", tags=["Ofertas"])
 
@@ -31,70 +32,23 @@ def crear_oferta(oferta_in: OfertaCreate, db: Session = Depends(obtener_db)):
 
     return nueva_oferta
 
-@router.post("/{id_oferta}/aceptar")
-def aceptar_oferta(id_oferta: str, db: Session = Depends(obtener_db)):
-    ahora = datetime.now(timezone.utc)
-
+@router.patch("/{id_oferta}/respuesta")
+def responder_oferta(
+    id_oferta: str, datos: RespuestaOferta, db: Session = Depends(obtener_db)
+):
     oferta = db.get(Oferta, id_oferta)
     if oferta is None:
         raise HTTPException(status_code=404, detail="Oferta no encontrada")
 
-    id_solicitud = oferta.id_solicitud
-    conductor_id = oferta.conductor_id
+    solicitud = db.get(Solicitud, oferta.id_solicitud)
+    if solicitud is None:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
-    r_solicitud = db.execute(
-        update(Solicitud)
-        .where(
-            Solicitud.solicitud_id == id_solicitud,
-            Solicitud.estado == "PENDIENTE",
-            Solicitud.conductor_id.is_(None),
-        )
-        .values(
-            conductor_id=conductor_id,
-            estado="ASIGNADA",
-            fecha_asignacion=ahora,
-        )
-        .execution_options(synchronize_session=False)
-    )
-    if r_solicitud.rowcount != 1:
-        db.rollback()
+    if solicitud.cliente_id != str(datos.cliente_id):
         raise HTTPException(
-            status_code=409,
-            detail="La solicitud ya fue asignada a otro conductor",
+            status_code=403, detail="El cliente no es el dueño de la solicitud"
         )
 
-    r_oferta = db.execute(
-        update(Oferta)
-        .where(
-            Oferta.id_oferta == id_oferta,
-            Oferta.estado == "PENDIENTE",
-            Oferta.fecha_expiracion > ahora,
-        )
-        .values(estado="ACEPTADA")
-        .execution_options(synchronize_session=False)
-    )
-    if r_oferta.rowcount != 1:
-        db.rollback()  
-        raise HTTPException(
-            status_code=409,
-            detail="La oferta ya fue respondida o expiró",
-        )
-
-    db.execute(
-        update(Oferta)
-        .where(
-            Oferta.id_solicitud == id_solicitud,
-            Oferta.estado == "PENDIENTE",
-        )
-        .values(estado="CANCELADA")
-        .execution_options(synchronize_session=False)
-    )
-
-    db.commit()
-
-    return {
-        "id_oferta": id_oferta,
-        "id_solicitud": id_solicitud,
-        "conductor_id": conductor_id,
-        "estado": "ASIGNADA",
-    }
+    if datos.accion == "ACEPTAR":
+        return asignar_conductor(db, id_oferta)
+    return rechazar_oferta(db, id_oferta)
