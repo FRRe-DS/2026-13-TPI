@@ -1,7 +1,6 @@
-
 from uuid import UUID
-from typing import Literal
-from fastapi import FastAPI, Depends
+from typing import Literal, Optional
+from fastapi import FastAPI, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -18,6 +17,7 @@ app = FastAPI(
 
 app.include_router(oferta.router)
 
+
 class SolicitudViaje(BaseModel):
     cliente_id: UUID
     origen_latitud: float = Field(ge=-90, le=90)
@@ -28,6 +28,16 @@ class SolicitudViaje(BaseModel):
 
 
 class RespuestaSolicitud(BaseModel):
+    mensaje: str
+    solicitud_id: UUID
+    estado: str
+
+
+class CancelarSolicitudRequest(BaseModel):
+    cliente_id: UUID
+
+
+class RespuestaCancelacion(BaseModel):
     mensaje: str
     solicitud_id: UUID
     estado: str
@@ -60,4 +70,46 @@ def crear_solicitud(
         "mensaje": "Solicitud creada correctamente",
         "solicitud_id": nueva_solicitud.solicitud_id,
         "estado": nueva_solicitud.estado
+    }
+
+
+@app.post(
+    "/solicitudes/{solicitud_id}/cancelar",
+    status_code=status.HTTP_200_OK,
+    response_model=RespuestaCancelacion,
+    summary="Cancelación previa de solicitud (RF-5.7)"
+)
+def cancelar_solicitud_previa(
+    solicitud_id: UUID,
+    datos: Optional[CancelarSolicitudRequest] = None,
+    db: Session = Depends(obtener_db)
+):
+    solicitud = db.query(Solicitud).filter(Solicitud.solicitud_id == str(solicitud_id)).first()
+
+    if not solicitud:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La solicitud no fue encontrada."
+        )
+
+    if datos and str(solicitud.cliente_id) != str(datos.cliente_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tiene permisos para cancelar una solicitud que no le pertenece."
+        )
+
+    if solicitud.estado != "PENDIENTE":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"No se puede cancelar la solicitud porque su estado actual es '{solicitud.estado}'."
+        )
+
+    solicitud.estado = "CANCELADA"
+    db.commit()
+    db.refresh(solicitud)
+
+    return {
+        "mensaje": "Solicitud cancelada correctamente antes de la asignación",
+        "solicitud_id": solicitud.solicitud_id,
+        "estado": solicitud.estado
     }
