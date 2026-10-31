@@ -72,6 +72,11 @@ La implementación de la comunicación real entre módulos queda pendiente para 
 app/
   models/
     solicitud.py
+    oferta.py
+  routers/
+    oferta.py
+  schemas/
+    oferta.py
   database.py
   main.py
 Contratos/
@@ -79,7 +84,7 @@ Contratos/
 tests/
   conftest.py
   test_main.py
-Dockerfile
+  test_rf_5_6_asignacion.pyDockerfile
 compose.yaml
 crear_tablas.py
 requirements.txt
@@ -113,17 +118,19 @@ La API utiliza el puerto `8000` y MySQL se encuentra disponible desde la computa
 
 ### Endpoints implementados
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/` | Devuelve un mensaje de bienvenida del módulo M5 |
-| POST | `/solicitudes` | Registra una solicitud de viaje con identificador del cliente, coordenadas de origen y destino y tipo de vehículo |
-
+| Método | Ruta                            | Descripción                                                                                                       |
+|--------|---------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| GET    | `/`                             | Devuelve un mensaje de bienvenida del módulo M5                                                                   |
+| POST   | `/solicitudes`                  | Registra una solicitud de viaje con identificador del cliente, coordenadas de origen y destino y tipo de vehículo |
+| POST   | `/ofertas/`                     | Crea una oferta para un conductor con tiempo de vencimiento                                                       |
+| POST   | `/ofertas/{id_oferta}/aceptar`  | Acepta una oferta y asigna el conductor a la solicitud (RF-5.6)                                                   |
 El endpoint `POST /solicitudes` recibe los siguientes atributos:
 
 - `cliente_id`: identificador UUID del cliente.
 - `origen_latitud` y `origen_longitud`: coordenadas del punto de origen.
 - `destino_latitud` y `destino_longitud`: coordenadas del destino.
 - `tipo_vehiculo`: `AUTO` o `MOTO`.
+
 
 Cuando la solicitud se registra correctamente, la API devuelve el código HTTP `201`, un `solicitud_id` generado automáticamente y el estado inicial `PENDIENTE`.
 
@@ -141,6 +148,20 @@ Cada solicitud registrada contiene:
 - `tipo_vehiculo`: tipo de vehículo solicitado.
 - `estado`: inicialmente `PENDIENTE`.
 - `fecha_creacion`: fecha y hora de registro.
+- `conductor_id`: conductor asignado. Es `NULL` hasta que se asigna.
+- `fecha_asignacion`: fecha y hora de la asignación. Es `NULL` hasta que se asigna.
+
+### Asignación única (RF-5.6)
+
+Una solicitud solo puede quedar asignada a un conductor, incluso si varios aceptan sus ofertas al mismo tiempo.
+
+`POST /ofertas/{id_oferta}/aceptar` ejecuta una única transacción:
+
+1. Asigna el conductor con un `UPDATE` condicional sobre la solicitud (solo si está `PENDIENTE` y sin conductor). Lo resuelve la base de datos, por lo que solo una de las aceptaciones concurrentes modifica la fila.
+2. Marca la oferta como `ACEPTADA` si sigue pendiente y vigente. Si no, revierte toda la transacción.
+3. Marca como `CANCELADA` las demás ofertas pendientes de esa solicitud.
+
+Respuestas: `200` asignación realizada, `404` oferta inexistente, `409` solicitud ya asignada u oferta expirada o ya respondida.
 
 La base de datos utiliza un volumen de Docker para conservar la información almacenada.
 
@@ -152,6 +173,7 @@ Actualmente se incluyen:
 
 - Una prueba del endpoint `GET /`.
 - Una prueba de integración del endpoint `POST /solicitudes`, utilizando una base de datos independiente llamada `m5_test_db`.
+- Pruebas de asignación única (`tests/test_rf_5_6_asignacion.py`): 10 aceptaciones concurrentes sobre la misma solicitud (un solo `200` y nueve `409`), aceptación secuencial, oferta inexistente y oferta expirada.
 
 Para ejecutar las pruebas desde el entorno virtual de Python:
 
@@ -186,8 +208,9 @@ Hasta el momento se implementaron:
 - Ejecución de FastAPI y MySQL mediante Docker Compose.
 - Pruebas automatizadas del endpoint de inicio y de creación de solicitudes.
 - Contrato OpenAPI del endpoint implementado.
+- Asignación única de conductor ante aceptaciones concurrentes (RF-5.6).
 
-Continúan pendientes las funcionalidades de despacho, búsqueda de conductores, gestión de ofertas, asignación única y comunicación real con los demás módulos.
+Continúan pendientes las funcionalidades de despacho, búsqueda de conductores, gestión de ofertas y comunicación real con los demás módulos.
 
 ---
 
