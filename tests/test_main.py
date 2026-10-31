@@ -1,6 +1,5 @@
-
 from uuid import UUID
-
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.models.solicitud import Solicitud
@@ -8,11 +7,14 @@ from app.models.solicitud import Solicitud
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def forzar_db_pruebas_en_todos_los_tests(db_pruebas):
+    yield
+
+
 def test_inicio():
     respuesta = client.get("/")
-
     assert respuesta.status_code == 200
-
     assert respuesta.json() == {
         "mensaje": "API del Grupo 13 - Modulo M5"
     }
@@ -29,11 +31,9 @@ def test_crear_solicitud(db_pruebas):
     }
 
     respuesta = client.post("/solicitudes", json=datos)
-
     assert respuesta.status_code == 201
 
     resultado = respuesta.json()
-
     assert resultado["mensaje"] == "Solicitud creada correctamente"
     assert resultado["estado"] == "PENDIENTE"
 
@@ -41,7 +41,6 @@ def test_crear_solicitud(db_pruebas):
     assert str(UUID(solicitud_id)) == solicitud_id
 
     solicitud_guardada = db_pruebas.get(Solicitud, solicitud_id)
-
     assert solicitud_guardada is not None
     assert solicitud_guardada.cliente_id == datos["cliente_id"]
     assert solicitud_guardada.origen_latitud == datos["origen_latitud"]
@@ -50,11 +49,6 @@ def test_crear_solicitud(db_pruebas):
     assert solicitud_guardada.destino_longitud == datos["destino_longitud"]
     assert solicitud_guardada.tipo_vehiculo == datos["tipo_vehiculo"]
     assert solicitud_guardada.estado == "PENDIENTE"
-
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
 
 
 def test_rechazar_tipo_vehiculo_invalido():
@@ -66,9 +60,7 @@ def test_rechazar_tipo_vehiculo_invalido():
         "destino_longitud": -58.9735,
         "tipo_vehiculo": "AVION"
     }
-
     respuesta = client.post("/solicitudes", json=datos)
-
     assert respuesta.status_code == 422
 
 
@@ -81,10 +73,9 @@ def test_rechazar_coordenadas_invalidas():
         "destino_longitud": -58.9735,
         "tipo_vehiculo": "AUTO"
     }
-
     respuesta = client.post("/solicitudes", json=datos)
-
     assert respuesta.status_code == 422
+
 
 def test_crear_oferta_exitosa():
     datos_solicitud = {
@@ -99,7 +90,6 @@ def test_crear_oferta_exitosa():
     assert res_solicitud.status_code == 201
     solicitud_id = res_solicitud.json()["solicitud_id"]
 
-    # Probar la creación de la oferta asociada
     datos_oferta = {
         "id_solicitud": solicitud_id,
         "conductor_id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
@@ -107,7 +97,6 @@ def test_crear_oferta_exitosa():
     }
     respuesta = client.post("/ofertas/", json=datos_oferta)
 
-    # 3. Validar estado y estructura de la respuesta
     assert respuesta.status_code == 201
     resultado = respuesta.json()
     assert resultado["id_solicitud"] == solicitud_id
@@ -118,7 +107,6 @@ def test_crear_oferta_exitosa():
 
 
 def test_rechazar_oferta_datos_incompletos():
-    # Verificación de validación al omitir campos obligatorios
     respuesta = client.post("/ofertas/", json={"tiempo_expiracion_seg": 30})
     assert respuesta.status_code == 422
 
@@ -228,3 +216,82 @@ def test_responder_oferta_accion_invalida():
     })
     assert respuesta.status_code == 422
 
+
+# ── RF 5.7 - Cancelación previa ────────────────────────────────────────────
+
+def test_cancelacion_previa_exitosa(db_pruebas):
+    datos = {
+        "cliente_id": CLIENTE_ID,
+        "origen_latitud": -27.4512,
+        "origen_longitud": -58.9866,
+        "destino_latitud": -27.4601,
+        "destino_longitud": -58.9735,
+        "tipo_vehiculo": "AUTO"
+    }
+    res_crear = client.post("/solicitudes", json=datos)
+    assert res_crear.status_code == 201
+    solicitud_id = res_crear.json()["solicitud_id"]
+
+    res_cancelar = client.post(
+        f"/solicitudes/{solicitud_id}/cancelar",
+        json={"cliente_id": CLIENTE_ID}
+    )
+    assert res_cancelar.status_code == 200
+
+    resultado = res_cancelar.json()
+    assert resultado["solicitud_id"] == solicitud_id
+    assert resultado["estado"] == "CANCELADA"
+
+    solicitud_guardada = db_pruebas.get(Solicitud, solicitud_id)
+    assert solicitud_guardada is not None
+    assert solicitud_guardada.estado == "CANCELADA"
+
+
+def test_cancelacion_solicitud_no_existente():
+    id_inexistente = "550e8400-e29b-41d4-a716-446655440999"
+    respuesta = client.post(f"/solicitudes/{id_inexistente}/cancelar")
+    assert respuesta.status_code == 404
+
+
+def test_cancelacion_cliente_no_propietario():
+    datos = {
+        "cliente_id": CLIENTE_ID,
+        "origen_latitud": -27.4512,
+        "origen_longitud": -58.9866,
+        "destino_latitud": -27.4601,
+        "destino_longitud": -58.9735,
+        "tipo_vehiculo": "AUTO"
+    }
+    res_crear = client.post("/solicitudes", json=datos)
+    assert res_crear.status_code == 201
+    solicitud_id = res_crear.json()["solicitud_id"]
+
+    respuesta = client.post(
+        f"/solicitudes/{solicitud_id}/cancelar",
+        json={"cliente_id": OTRO_CLIENTE_ID}
+    )
+    assert respuesta.status_code == 403
+
+
+def test_cancelacion_solicitud_ya_cancelada():
+    datos = {
+        "cliente_id": CLIENTE_ID,
+        "origen_latitud": -27.4512,
+        "origen_longitud": -58.9866,
+        "destino_latitud": -27.4601,
+        "destino_longitud": -58.9735,
+        "tipo_vehiculo": "MOTO"
+    }
+    res_crear = client.post("/solicitudes", json=datos)
+    solicitud_id = res_crear.json()["solicitud_id"]
+
+    client.post(
+        f"/solicitudes/{solicitud_id}/cancelar",
+        json={"cliente_id": CLIENTE_ID}
+    )
+
+    respuesta = client.post(
+        f"/solicitudes/{solicitud_id}/cancelar",
+        json={"cliente_id": CLIENTE_ID}
+    )
+    assert respuesta.status_code == 409
