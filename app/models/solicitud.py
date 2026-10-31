@@ -39,5 +39,9 @@ class Solicitud(Base):
     fecha_asignacion: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    conductor_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
+    fecha_asignacion: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
