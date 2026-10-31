@@ -45,3 +45,24 @@ def db_pruebas():
         sesion.close()
         transaccion.rollback()
         conexion.close()
+
+@pytest.fixture
+def concurrencia_db():
+    """Una sesión por request, commits reales sobre m5_test_db y limpieza al final."""
+    Base.metadata.create_all(bind=test_engine)
+
+    def obtener_db_concurrente():
+        sesion = TestSessionLocal()
+        try:
+            yield sesion
+        finally:
+            sesion.close()
+
+    app.dependency_overrides[obtener_db] = obtener_db_concurrente
+    try:
+        yield TestSessionLocal
+    finally:
+        app.dependency_overrides.pop(obtener_db, None)
+        with test_engine.begin() as conexion:
+            for tabla in reversed(Base.metadata.sorted_tables):
+                conexion.execute(tabla.delete())
