@@ -19,7 +19,7 @@ Nuestro grupo tiene asignado el **Módulo M5 — Solicitud y Despacho**, respons
 5. Lopez, Agustin
 6. Mendez, Joaquin
 7. Quiroz, Ariel
-8. Samardich, Agustin
+8. Gomez Samardich, Agustin
 9. Servin, Santiago
 
 ### Tecnologías utilizadas
