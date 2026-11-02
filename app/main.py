@@ -3,6 +3,7 @@ from typing import Literal, Optional
 from fastapi import FastAPI, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from fastapi.responses import JSONResponse
 
 from app.database import obtener_db
 from app.models.solicitud import Solicitud
@@ -108,12 +109,15 @@ def crear_solicitud_desde_reserva(
 # 1. Control de Idempotencia: Verificar si esta reserva ya generó una solicitud (acuerdo M9)
     solicitud_existente = db.query(Solicitud).filter(Solicitud.reserva_id == reserva_id_str).first()
     if solicitud_existente:
-        return {
-            "mensaje": "Solicitud recuperada previamente",
-            "solicitud_id": solicitud_existente.solicitud_id,
-            "reserva_id": solicitud_existente.reserva_id,
-            "estado": solicitud_existente.estado
-        }
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "mensaje": "Solicitud recuperada previamente",
+                "solicitud_id": str(solicitud_existente.solicitud_id),
+                "reserva_id": str(solicitud_existente.reserva_id),
+                "estado": solicitud_existente.estado
+            }
+        )
 
     # 2. Registrar la nueva solicitud
     nueva_solicitud = Solicitud(
