@@ -43,6 +43,25 @@ class RespuestaCancelacion(BaseModel):
     estado: str
 
 
+# ──esquema RF-5.2 (Solicitud desde reserva) ───────────────
+
+class SolicitudDesdeReservaRequest(BaseModel):
+    reserva_id: UUID
+    cliente_id: UUID
+    origen_latitud: float = Field(ge=-90, le=90)
+    origen_longitud: float = Field(ge=-180, le=180)
+    destino_latitud: float = Field(ge=-90, le=90)
+    destino_longitud: float = Field(ge=-180, le=180)
+    tipo_vehiculo: Literal["AUTO", "MOTO"]
+
+
+class RespuestaSolicitudReserva(BaseModel):
+    mensaje: str
+    solicitud_id: UUID
+    reserva_id: UUID
+    estado: str
+
+# ── rutas de la API ─────────────────────────────────────────────────────────
 @app.get("/")
 def inicio():
     return {"mensaje": "API del Grupo 13 - Modulo M5"}
@@ -72,6 +91,52 @@ def crear_solicitud(
         "estado": nueva_solicitud.estado
     }
 
+# ── endpoint RF-5.2 ───────────────────────────────────────────
+
+@app.post(
+    "/solicitudes/desde-reserva",
+    status_code=status.HTTP_201_CREATED,
+    response_model=RespuestaSolicitudReserva,
+    summary="Solicitud de viaje proveniente de reserva (RF-5.2)"
+)
+def crear_solicitud_desde_reserva(
+    datos: SolicitudDesdeReservaRequest,
+    db: Session = Depends(obtener_db)
+):
+    reserva_id_str = str(datos.reserva_id)
+
+# 1. Control de Idempotencia: Verificar si esta reserva ya generó una solicitud (acuerdo M9)
+    solicitud_existente = db.query(Solicitud).filter(Solicitud.reserva_id == reserva_id_str).first()
+    if solicitud_existente:
+        return {
+            "mensaje": "Solicitud recuperada previamente",
+            "solicitud_id": solicitud_existente.solicitud_id,
+            "reserva_id": solicitud_existente.reserva_id,
+            "estado": solicitud_existente.estado
+        }
+
+    # 2. Registrar la nueva solicitud
+    nueva_solicitud = Solicitud(
+        reserva_id=reserva_id_str,
+        cliente_id=str(datos.cliente_id),
+        origen_latitud=datos.origen_latitud,
+        origen_longitud=datos.origen_longitud,
+        destino_latitud=datos.destino_latitud,
+        destino_longitud=datos.destino_longitud,
+        tipo_vehiculo=datos.tipo_vehiculo,
+        estado="PENDIENTE"
+    )
+
+    db.add(nueva_solicitud)
+    db.commit()
+    db.refresh(nueva_solicitud)
+
+    return {
+        "mensaje": "Solicitud desde reserva creada correctamente",
+        "solicitud_id": nueva_solicitud.solicitud_id,
+        "reserva_id": nueva_solicitud.reserva_id,
+        "estado": nueva_solicitud.estado
+    }
 
 @app.post(
     "/solicitudes/{solicitud_id}/cancelar",
