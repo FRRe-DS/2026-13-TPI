@@ -38,11 +38,25 @@ def db_pruebas():
 
 
 @pytest.fixture
-def concurrencia_db():
-    sesion = TestSessionLocal()
-    app.dependency_overrides[obtener_db] = lambda: sesion
+def concurrencia_db(tmp_path):
+    """Base SQLite en archivo: cada request usa su propia sesión y conexión."""
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'concurrencia.db'}",
+        connect_args={"check_same_thread": False, "timeout": 30},
+    )
+    Base.metadata.create_all(bind=engine)
+    SesionConcurrente = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def obtener_db_concurrente():
+        sesion = SesionConcurrente()
+        try:
+            yield sesion
+        finally:
+            sesion.close()
+
+    app.dependency_overrides[obtener_db] = obtener_db_concurrente
     try:
-        yield TestSessionLocal
+        yield SesionConcurrente
     finally:
         app.dependency_overrides.pop(obtener_db, None)
-        sesion.close()
+        engine.dispose()
