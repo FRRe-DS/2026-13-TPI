@@ -143,6 +143,7 @@ El módulo utiliza **MySQL** para almacenar las solicitudes de viaje mediante SQ
 Cada solicitud registrada contiene:
 
 - `solicitud_id`: identificador UUID generado automáticamente.
+- `reserva_id`: identificador UUID dado por el módulo M9 si la solicitud se originó desde una reserva programada. Es NULL para solicitudes inmediatas.
 - `cliente_id`: identificador del cliente.
 - Coordenadas de origen y destino.
 - `tipo_vehiculo`: tipo de vehículo solicitado.
