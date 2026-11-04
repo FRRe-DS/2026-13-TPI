@@ -9,6 +9,11 @@ from app.database import obtener_db
 from app.models.solicitud import Solicitud
 from app.routers import oferta
 
+<<<<<<< HEAD
+from app.routers import routers_oferta, despachoROU
+from app.servicios import registrar_cambio_estado
+=======
+>>>>>>> origin/main
 
 app = FastAPI(
     title="API M5 - Solicitud y Despacho",
@@ -17,6 +22,11 @@ app = FastAPI(
 )
 
 app.include_router(oferta.router)
+<<<<<<< HEAD
+app.include_router(routers_oferta.router)
+app.include_router(despachoROU.router)
+=======
+>>>>>>> origin/main
 
 
 class SolicitudViaje(BaseModel):
@@ -79,13 +89,24 @@ def crear_solicitud(
         origen_longitud=solicitud.origen_longitud,
         destino_latitud=solicitud.destino_latitud,
         destino_longitud=solicitud.destino_longitud,
+<<<<<<< HEAD
+        tipo_vehiculo=solicitud.tipo_vehiculo,
+        estado="PENDIENTE"
+=======
         tipo_vehiculo=solicitud.tipo_vehiculo
+>>>>>>> origin/main
     )
 
     db.add(nueva_solicitud)
     db.commit()
     db.refresh(nueva_solicitud)
 
+<<<<<<< HEAD
+    # Registramos el estado inicial en el historial de despacho (RF-5.9)
+    registrar_cambio_estado(db, nueva_solicitud.solicitud_id, "PENDIENTE")
+
+=======
+>>>>>>> origin/main
     return {
         "mensaje": "Solicitud creada correctamente",
         "solicitud_id": nueva_solicitud.solicitud_id,
@@ -174,9 +195,17 @@ def cancelar_solicitud_previa(
         )
 
     solicitud.estado = "CANCELADA"
+<<<<<<< HEAD
+    registrar_cambio_estado(db, str(solicitud.solicitud_id), "CANCELADA")
     db.commit()
     db.refresh(solicitud)
 
+    
+=======
+    db.commit()
+    db.refresh(solicitud)
+
+>>>>>>> origin/main
     return {
         "mensaje": "Solicitud cancelada correctamente antes de la asignación",
         "solicitud_id": solicitud.solicitud_id,

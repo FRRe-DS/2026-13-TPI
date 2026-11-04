@@ -2,16 +2,29 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/main
 from app.database import obtener_db
 from app.models.despacho import HistorialDespacho
 from app.models.oferta import Oferta
 from app.models.solicitud import Solicitud
+<<<<<<< HEAD
+from app.schemas.schemas_oferta import (
+=======
 from app.schemas.oferta import (
+>>>>>>> origin/main
     OfertaCreate,
     OfertaResponse,
     RespuestaOfertaRequest,
     RespuestaOfertaResponse,
 )
+<<<<<<< HEAD
+from app.servicios import registrar_cambio_estado  # función de trazabilidad RF-5.9
+from app.services.asignacion import asignar_conductor, rechazar_oferta
+=======
+>>>>>>> origin/main
 
 router = APIRouter(prefix="/ofertas", tags=["Ofertas"])
 
@@ -104,3 +117,58 @@ def responder_oferta(
         estado_solicitud=solicitud.estado,
         mensaje=mensaje,
     )
+<<<<<<< HEAD
+
+
+    # Opcional: Validar que el cliente sea el dueño si la lógica lo requiere
+    if datos.accion == "ACEPTAR":
+        resultado = asignar_conductor(db, id_oferta)
+    else:
+        resultado = rechazar_oferta(db, id_oferta)
+
+    return RespuestaOfertaResponse(
+        id_oferta=resultado["id_oferta"],
+        id_solicitud=resultado["id_solicitud"],
+        estado_oferta=resultado["estado_oferta"],
+        estado_solicitud=resultado["estado_solicitud"],
+        mensaje=resultado["mensaje"],
+    )
+
+
+# --- ENDPOINTS COMPATIBLES CON LOS TESTS DE RF-5.9 (/aceptar y /rechazar) ---
+@router.patch("/{id_oferta}/aceptar", status_code=status.HTTP_200_OK)
+def aceptar_oferta_test(id_oferta: str, db: Session = Depends(obtener_db)):
+    oferta = db.get(Oferta, id_oferta)
+    if not oferta or oferta.estado != "PENDIENTE":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Oferta no encontrada o no pendiente")
+
+    oferta.estado = "ACEPTADA"
+    solicitud_actualizada = registrar_cambio_estado(db, oferta.id_solicitud, "ACEPTADA")
+    db.commit()
+
+    return {
+        "mensaje": "Oferta aceptada correctamente",
+        "id_oferta": id_oferta,
+        "id_solicitud": oferta.id_solicitud,
+        "estado_solicitud": solicitud_actualizada.estado
+    }
+
+
+@router.patch("/{id_oferta}/rechazar", status_code=status.HTTP_200_OK)
+def rechazar_oferta_test(id_oferta: str, db: Session = Depends(obtener_db)):
+    oferta = db.get(Oferta, id_oferta)
+    if not oferta or oferta.estado != "PENDIENTE":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Oferta no encontrada o no pendiente")
+
+    oferta.estado = "RECHAZADA"
+    solicitud_actualizada = registrar_cambio_estado(db, oferta.id_solicitud, "RECHAZADA")
+    db.commit()
+    
+    return {
+        "mensaje": "Oferta rechazada",
+        "id_oferta": id_oferta,
+        "id_solicitud": oferta.id_solicitud,
+        "estado_solicitud": solicitud_actualizada.estado
+    }
+=======
+>>>>>>> origin/main
