@@ -273,6 +273,145 @@ paths:
                           type: string
                         type:
                           type: string
+  /solicitudes/{solicitud_id}/sin-conductor:
+    post:
+      summary: Informar que no hay conductores disponibles (RF-5.8)
+      description: >
+        Marca la solicitud como SIN_CONDUCTOR cuando no hay candidatos adecuados
+        o cuando venció el período de búsqueda. Solo aplica a solicitudes en
+        estado PENDIENTE. Las ofertas pendientes de la solicitud pasan a EXPIRADA
+        y el cambio queda registrado en el historial de despacho. La operación es
+        idempotente: repetirla no duplica efectos.
+
+      parameters:
+        - name: solicitud_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motivo:
+                  type: string
+                  enum:
+                    - SIN_CANDIDATOS
+                    - BUSQUEDA_VENCIDA
+                  default: SIN_CANDIDATOS
+                  description: Causa por la cual no se consiguió conductor.
+
+      responses:
+        "200":
+          description: Solicitud marcada como sin conductor (o ya lo estaba)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - solicitud_id
+                  - estado
+                  - motivo
+                  - mensaje
+                  - ya_registrada
+                properties:
+                  solicitud_id:
+                    type: string
+                    format: uuid
+                  estado:
+                    type: string
+                    enum:
+                      - SIN_CONDUCTOR
+                  motivo:
+                    type: string
+                    enum:
+                      - SIN_CANDIDATOS
+                      - BUSQUEDA_VENCIDA
+                  mensaje:
+                    type: string
+                  ya_registrada:
+                    type: boolean
+                    description: true si la solicitud ya estaba en SIN_CONDUCTOR.
+
+        "404":
+          description: La solicitud no fue encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+        "409":
+          description: La solicitud ya no está pendiente (por ejemplo, fue aceptada o cancelada)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+        "422":
+          description: Error de validación de los datos enviados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        loc:
+                          type: array
+                          items:
+                            type:
+                              - string
+                              - integer
+                        msg:
+                          type: string
+                        type:
+                          type: string
+
+  /solicitudes/vencer-busquedas:
+    post:
+      summary: Vencer las búsquedas que superaron el plazo (RF-5.8)
+      description: >
+        Marca como SIN_CONDUCTOR todas las solicitudes PENDIENTE cuyo período de
+        búsqueda venció. La duración del plazo se configura con la variable de
+        entorno BUSQUEDA_TIMEOUT_SEG (por defecto 120 segundos).
+
+      responses:
+        "200":
+          description: Resultado del barrido de vencimientos
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - timeout_seg
+                  - cantidad
+                  - solicitudes
+                properties:
+                  timeout_seg:
+                    type: integer
+                    description: Plazo de búsqueda aplicado, en segundos.
+                  cantidad:
+                    type: integer
+                    description: Cantidad de solicitudes marcadas en esta ejecución.
+                  solicitudes:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
 components:
   schemas:
     Oferta:
