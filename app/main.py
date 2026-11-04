@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.database import obtener_db
 from app.models.solicitud import Solicitud
-from app.routers import oferta
+from app.routers import oferta, sin_conductor
 
 
 app = FastAPI(
@@ -17,6 +17,7 @@ app = FastAPI(
 )
 
 app.include_router(oferta.router)
+app.include_router(sin_conductor.router)
 
 
 class SolicitudViaje(BaseModel):
