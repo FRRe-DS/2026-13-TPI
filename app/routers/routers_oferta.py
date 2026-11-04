@@ -2,19 +2,29 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 from app.database import obtener_db
 from app.models.despacho import HistorialDespacho
 from app.models.oferta import Oferta
 from app.models.solicitud import Solicitud
+<<<<<<< HEAD
 from app.schemas.schemas_oferta import (
+=======
+from app.schemas.oferta import (
+>>>>>>> origin/main
     OfertaCreate,
     OfertaResponse,
     RespuestaOfertaRequest,
     RespuestaOfertaResponse,
 )
+<<<<<<< HEAD
 from app.servicios import registrar_cambio_estado  # función de trazabilidad RF-5.9
 from app.services.asignacion import asignar_conductor, rechazar_oferta
+=======
+>>>>>>> origin/main
 
 router = APIRouter(prefix="/ofertas", tags=["Ofertas"])
 
@@ -107,6 +117,7 @@ def responder_oferta(
         estado_solicitud=solicitud.estado,
         mensaje=mensaje,
     )
+<<<<<<< HEAD
 
 
     # Opcional: Validar que el cliente sea el dueño si la lógica lo requiere
@@ -159,3 +170,5 @@ def rechazar_oferta_test(id_oferta: str, db: Session = Depends(obtener_db)):
         "id_solicitud": oferta.id_solicitud,
         "estado_solicitud": solicitud_actualizada.estado
     }
+=======
+>>>>>>> origin/main
