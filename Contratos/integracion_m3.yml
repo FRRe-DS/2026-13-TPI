@@ -1,0 +1,75 @@
+
+openapi: 3.1.0
+
+info:
+  title: Integración M5 con M3 - Conductores y Vehículos
+  description: >
+    Propuesta de contrato para consultar los datos operativos
+    de un conductor y su vehículo activo.
+    La ruta HTTP y los códigos de error están pendientes
+    de confirmación con el equipo M3.
+    Esta integración todavía no está implementada.
+  version: 0.1.0
+
+paths:
+  /conductores/{conductor_id}:
+    get:
+      summary: Consultar conductor y vehículo activo
+      operationId: consultarConductor
+
+      parameters:
+        - name: conductor_id
+          in: path
+          required: true
+          description: Identificador UUID del conductor
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+        '200':
+          description: Información del conductor
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - conductor_id
+                  - habilitado
+                  - disponible
+                  - vehiculo
+                properties:
+                  conductor_id:
+                    type: string
+                    format: uuid
+
+                  habilitado:
+                    type: boolean
+
+                  disponible:
+                    type: boolean
+
+                  vehiculo:
+                    type: object
+                    description: Vehículo activo del conductor
+                    required:
+                      - vehiculo_id
+                      - tipo_vehiculo
+                    properties:
+                      vehiculo_id:
+                        type: string
+                        format: uuid
+                      tipo_vehiculo:
+                        type: string
+                        enum:
+                          - AUTO
+                          - MOTO
+
+        '404':
+          description: Conductor no encontrado
+
+        '422':
+          description: Identificador del conductor inválido
+
+        '503':
+          description: Servicio temporalmente no disponible

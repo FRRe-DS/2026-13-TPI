@@ -1,0 +1,173 @@
+
+openapi: 3.1.0
+
+info:
+  title: Integración M5 con M4 - Ubicación y Disponibilidad
+  description: >
+    Propuesta de contrato para buscar conductores cercanos
+    y solicitar bloqueos temporales.
+    Las rutas, respuestas y condiciones de bloqueo
+    están pendientes de confirmación con M4.
+    Estas operaciones todavía no están implementadas.
+  version: 0.1.0
+
+paths:
+  /conductores/candidatos:
+    post:
+      summary: Buscar conductores cercanos
+      operationId: buscarConductoresCercanos
+      description: >
+        Busca conductores compatibles con el tipo de vehículo,
+        próximos al origen y disponibles según los criterios de M4.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusquedaCandidatos'
+
+      responses:
+        '200':
+          description: Resultado de la búsqueda de candidatos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoBusqueda'
+
+        '422':
+          description: Datos de búsqueda inválidos
+
+        '503':
+          description: Servicio temporalmente no disponible
+
+  /conductores/bloqueos:
+    post:
+      summary: Solicitar bloqueo temporal de un conductor
+      operationId: bloquearConductor
+      description: >
+        Solicita reservar temporalmente un conductor para una
+        solicitud de viaje. M4 deberá controlar que no exista
+        un bloqueo incompatible vigente.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolicitudBloqueo'
+
+      responses:
+        '200':
+          description: Resultado del intento de bloqueo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoBloqueo'
+
+        '409':
+          description: Conflicto por bloqueo existente
+
+        '422':
+          description: Datos de bloqueo inválidos
+
+        '503':
+          description: Servicio temporalmente no disponible
+
+components:
+  schemas:
+    BusquedaCandidatos:
+      type: object
+      required:
+        - solicitud_id
+        - origen_latitud
+        - origen_longitud
+        - destino_latitud
+        - destino_longitud
+        - tipo_vehiculo
+        - radio_maximo_km
+      properties:
+        solicitud_id:
+          type: string
+          format: uuid
+        origen_latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        origen_longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+        destino_latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        destino_longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+        tipo_vehiculo:
+          type: string
+          enum:
+            - AUTO
+            - MOTO
+        radio_maximo_km:
+          type: number
+          exclusiveMinimum: 0
+
+    ResultadoBusqueda:
+      type: object
+      required:
+        - solicitud_id
+        - conductores
+      properties:
+        solicitud_id:
+          type: string
+          format: uuid
+        conductores:
+          type: array
+          items:
+            type: object
+            required:
+              - conductor_id
+              - distancia_km
+              - eta_minutos
+            properties:
+              conductor_id:
+                type: string
+                format: uuid
+              distancia_km:
+                type: number
+                minimum: 0
+              eta_minutos:
+                type: integer
+                minimum: 0
+
+    SolicitudBloqueo:
+      type: object
+      required:
+        - solicitud_id
+        - conductor_id
+      properties:
+        solicitud_id:
+          type: string
+          format: uuid
+        conductor_id:
+          type: string
+          format: uuid
+
+    ResultadoBloqueo:
+      type: object
+      required:
+        - solicitud_id
+        - conductor_id
+        - bloqueo_confirmado
+      properties:
+        solicitud_id:
+          type: string
+          format: uuid
+        conductor_id:
+          type: string
+          format: uuid
+        bloqueo_confirmado:
+          type: boolean

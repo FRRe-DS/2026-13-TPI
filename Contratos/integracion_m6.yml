@@ -1,0 +1,106 @@
+
+openapi: 3.1.0
+
+info:
+  title: Integración M5 con M6 - Viajes
+  description: >
+    Propuesta de contrato para crear un viaje después
+    de asignar un conductor a una solicitud.
+    La ruta HTTP y las respuestas de error están
+    pendientes de confirmación con el equipo M6.
+    Esta integración todavía no está implementada.
+  version: 0.1.0
+
+paths:
+  /viajes:
+    post:
+      summary: Crear un viaje
+      operationId: crearViaje
+      description: >
+        M5 solicita a M6 la creación de un viaje
+        después de confirmar la asignación de un conductor.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearViaje'
+
+      responses:
+        '201':
+          description: Viaje creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaViaje'
+
+        '409':
+          description: Conflicto al crear el viaje
+
+        '422':
+          description: Datos de entrada inválidos
+
+        '503':
+          description: Servicio temporalmente no disponible
+
+components:
+  schemas:
+    CrearViaje:
+      type: object
+      required:
+        - solicitud_id
+        - cliente_id
+        - conductor_id
+        - vehiculo_id
+        - origen_latitud
+        - origen_longitud
+        - destino_latitud
+        - destino_longitud
+      properties:
+        solicitud_id:
+          type: string
+          format: uuid
+        cliente_id:
+          type: string
+          format: uuid
+        conductor_id:
+          type: string
+          format: uuid
+        vehiculo_id:
+          type: string
+          format: uuid
+        origen_latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        origen_longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+        destino_latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        destino_longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+
+    RespuestaViaje:
+      type: object
+      required:
+        - viaje_id
+        - solicitud_id
+        - estado
+      properties:
+        viaje_id:
+          type: string
+          format: uuid
+        solicitud_id:
+          type: string
+          format: uuid
+        estado:
+          type: string
+          description: Estado inicial del viaje.
+          example: CREADO
