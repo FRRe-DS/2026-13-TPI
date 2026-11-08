@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import update
-from app.models.solicitud import Solicitud
 
 from app.database import obtener_db
 from app.models.oferta import Oferta
@@ -15,14 +14,13 @@ router = APIRouter(prefix="/ofertas", tags=["Ofertas"])
 def crear_oferta(oferta_in: OfertaCreate, db: Session = Depends(obtener_db)):
     ahora = datetime.now(timezone.utc)
     
-    # Se usa tiempo_expiracion_seg del schema para calcular la fecha de expiración real
     expiracion = ahora + timedelta(seconds=oferta_in.tiempo_expiracion_seg)
 
     nueva_oferta = Oferta(
         id_solicitud=oferta_in.id_solicitud,
         conductor_id=oferta_in.conductor_id,
         fecha_envio=ahora,
-        fecha_expiracion=expiracion,  # Se asigna a la columna de la base de datos
+        fecha_expiracion=expiracion,
         estado="PENDIENTE"
     )
 
@@ -40,13 +38,9 @@ def responder_oferta(
     if oferta is None:
         raise HTTPException(status_code=404, detail="Oferta no encontrada")
 
-    solicitud = db.get(Solicitud, oferta.id_solicitud)
-    if solicitud is None:
-        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
-
-    if solicitud.cliente_id != str(datos.cliente_id):
+    if oferta.conductor_id != str(datos.conductor_id):
         raise HTTPException(
-            status_code=403, detail="El cliente no es el dueño de la solicitud"
+            status_code=403, detail="El conductor no es el destinatario de esta oferta"
         )
 
     if datos.accion == "ACEPTAR":

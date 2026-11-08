@@ -1,7 +1,6 @@
 """
 RF 5.5 - Aceptar o rechazar ofertas de conductor
 """
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -9,7 +8,7 @@ client = TestClient(app)
 
 CLIENTE_ID = "550e8400-e29b-41d4-a716-446655440000"
 CONDUCTOR_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
-OTRO_CLIENTE_ID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+OTRO_CONDUCTOR_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
 
 
 def _crear_solicitud_y_oferta():
@@ -39,7 +38,7 @@ def test_aceptar_oferta_exitosamente():
     solicitud_id, oferta_id = _crear_solicitud_y_oferta()
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "cliente_id": CLIENTE_ID,
+        "conductor_id": CONDUCTOR_ID,
         "accion": "ACEPTAR",
     })
 
@@ -55,7 +54,7 @@ def test_rechazar_oferta_exitosamente():
     solicitud_id, oferta_id = _crear_solicitud_y_oferta()
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "cliente_id": CLIENTE_ID,
+        "conductor_id": CONDUCTOR_ID,
         "accion": "RECHAZAR",
     })
 
@@ -67,17 +66,17 @@ def test_rechazar_oferta_exitosamente():
 
 def test_responder_oferta_no_existente():
     respuesta = client.patch("/ofertas/id-inexistente/respuesta", json={
-        "cliente_id": CLIENTE_ID,
+        "conductor_id": CONDUCTOR_ID,
         "accion": "ACEPTAR",
     })
     assert respuesta.status_code == 404
 
 
-def test_responder_oferta_cliente_no_autorizado():
+def test_responder_oferta_conductor_no_autorizado():
     _, oferta_id = _crear_solicitud_y_oferta()
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "cliente_id": OTRO_CLIENTE_ID,
+        "conductor_id": OTRO_CONDUCTOR_ID,
         "accion": "ACEPTAR",
     })
     assert respuesta.status_code == 403
@@ -87,12 +86,12 @@ def test_responder_oferta_ya_respondida():
     _, oferta_id = _crear_solicitud_y_oferta()
 
     client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "cliente_id": CLIENTE_ID,
+        "conductor_id": CONDUCTOR_ID,
         "accion": "ACEPTAR",
     })
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "cliente_id": CLIENTE_ID,
+        "conductor_id": CONDUCTOR_ID,
         "accion": "RECHAZAR",
     })
     assert respuesta.status_code == 409
@@ -102,7 +101,7 @@ def test_responder_oferta_accion_invalida():
     _, oferta_id = _crear_solicitud_y_oferta()
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "cliente_id": CLIENTE_ID,
+        "conductor_id": CONDUCTOR_ID,
         "accion": "IGNORAR",
     })
     assert respuesta.status_code == 422
