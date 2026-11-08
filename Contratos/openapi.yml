@@ -174,13 +174,13 @@ paths:
             schema:
               type: object
               required:
-                - cliente_id
+                - conductor_id
                 - accion
               properties:
-                cliente_id:
+                conductor_id:
                   type: string
                   format: uuid
-                  description: ID del cliente dueño de la solicitud
+                  description: ID del conductor destinatario de la oferta
                 accion:
                   type: string
                   enum:
