@@ -23,5 +23,5 @@ class OfertaResponse(BaseModel):
 
 # Responder una oferta (RF-5.5)
 class RespuestaOferta(BaseModel):
-    cliente_id: UUID
+    conductor_id: UUID
     accion: Literal["ACEPTAR", "RECHAZAR"]
