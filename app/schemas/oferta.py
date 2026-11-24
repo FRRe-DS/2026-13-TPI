@@ -1,16 +1,14 @@
 from datetime import datetime
 from typing import Optional, Literal
 from pydantic import BaseModel, ConfigDict
-from uuid import UUID
 
 
-# Crear oferta
 class OfertaCreate(BaseModel):
     id_solicitud: str
     conductor_id: str
-    tiempo_expiracion_seg: Optional[int] = 30  # Tiempo por defecto para el vencimiento (30s)
+    tiempo_expiracion_seg: Optional[int] = 30
 
-# Respuesta de la API
+
 class OfertaResponse(BaseModel):
     id_oferta: str
     id_solicitud: str
@@ -21,7 +19,15 @@ class OfertaResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-# Responder una oferta (RF-5.5)
-class RespuestaOferta(BaseModel):
-    conductor_id: UUID
+
+class RespuestaOfertaRequest(BaseModel):
+    cliente_id: str
     accion: Literal["ACEPTAR", "RECHAZAR"]
+
+
+class RespuestaOfertaResponse(BaseModel):
+    id_oferta: str
+    id_solicitud: str
+    estado_oferta: str
+    estado_solicitud: str
+    mensaje: str
