@@ -27,4 +27,4 @@ class RespuestaBusqueda(BaseModel):
     estado: str
     radio_aplicado_km: float
     generado_en: datetime
-    candidatos: list[CandidatoM4]
+    conductores: list[CandidatoM4]

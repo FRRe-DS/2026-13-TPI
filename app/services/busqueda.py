@@ -117,5 +117,5 @@ def iniciar_busqueda(db: Session, solicitud_id: str) -> RespuestaBusqueda:
         estado=estado_final,
         radio_aplicado_km=resultado_m4.radio_aplicado_km,
         generado_en=resultado_m4.generado_en,
-        candidatos=candidatos,
+        conductores=candidatos,
     )

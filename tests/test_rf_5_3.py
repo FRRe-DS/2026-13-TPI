@@ -86,7 +86,7 @@ def test_busqueda_devuelve_candidatos_ordenados_y_compatibles(db_pruebas, monkey
     cuerpo = respuesta.json()
     assert cuerpo["estado"] == "buscando"
     assert cuerpo["radio_aplicado_km"] == 6.5
-    ids = [c["conductor_id"] for c in cuerpo["candidatos"]]
+    ids = [c["conductor_id"] for c in cuerpo["conductores"]]
     assert ids == [CONDUCTOR_A, CONDUCTOR_B]  # ordenados, sin MOTO y sin repetidos
     assert llamadas == [(-27.4512, -58.9866, "AUTO")]
 
@@ -106,7 +106,7 @@ def test_busqueda_sin_conductores_deja_sin_disponibilidad(db_pruebas, monkeypatc
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
     assert cuerpo["estado"] == "sin_disponibilidad"
-    assert cuerpo["candidatos"] == []
+    assert cuerpo["conductores"] == []
     assert cuerpo["radio_aplicado_km"] == 9.5
     assert db_pruebas.get(Solicitud, solicitud_id).estado == "sin_disponibilidad"
     assert "sin_disponibilidad" in _estados_del_historial(db_pruebas, solicitud_id)
