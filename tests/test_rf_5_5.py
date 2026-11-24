@@ -1,5 +1,5 @@
 """
-RF 5.5 - Aceptar o rechazar ofertas de conductor
+RF-5.5 - Aceptar o rechazar ofertas
 """
 from fastapi.testclient import TestClient
 from app.main import app
@@ -8,10 +8,10 @@ client = TestClient(app)
 
 CLIENTE_ID = "550e8400-e29b-41d4-a716-446655440000"
 CONDUCTOR_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
-OTRO_CONDUCTOR_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+CLIENTE_ID_AJENO = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
 
 
-def _crear_solicitud_y_oferta():
+def _crear_solicitud_y_oferta(db_pruebas):
     res_sol = client.post("/solicitudes", json={
         "cliente_id": CLIENTE_ID,
         "origen_latitud": -27.4512,
@@ -34,11 +34,11 @@ def _crear_solicitud_y_oferta():
     return solicitud_id, oferta_id
 
 
-def test_aceptar_oferta_exitosamente():
-    solicitud_id, oferta_id = _crear_solicitud_y_oferta()
+def test_aceptar_oferta_exitosamente(db_pruebas):
+    solicitud_id, oferta_id = _crear_solicitud_y_oferta(db_pruebas)
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "conductor_id": CONDUCTOR_ID,
+        "cliente_id": CLIENTE_ID,
         "accion": "ACEPTAR",
     })
 
@@ -50,11 +50,11 @@ def test_aceptar_oferta_exitosamente():
     assert resultado["estado_solicitud"] == "ACEPTADA"
 
 
-def test_rechazar_oferta_exitosamente():
-    solicitud_id, oferta_id = _crear_solicitud_y_oferta()
+def test_rechazar_oferta_exitosamente(db_pruebas):
+    solicitud_id, oferta_id = _crear_solicitud_y_oferta(db_pruebas)
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "conductor_id": CONDUCTOR_ID,
+        "cliente_id": CLIENTE_ID,
         "accion": "RECHAZAR",
     })
 
@@ -64,44 +64,61 @@ def test_rechazar_oferta_exitosamente():
     assert resultado["estado_solicitud"] == "PENDIENTE"
 
 
-def test_responder_oferta_no_existente():
+def test_responder_oferta_no_existente(db_pruebas):
     respuesta = client.patch("/ofertas/id-inexistente/respuesta", json={
-        "conductor_id": CONDUCTOR_ID,
+        "cliente_id": CLIENTE_ID,
         "accion": "ACEPTAR",
     })
     assert respuesta.status_code == 404
 
 
-def test_responder_oferta_conductor_no_autorizado():
-    _, oferta_id = _crear_solicitud_y_oferta()
+def test_responder_oferta_cliente_no_autorizado(db_pruebas):
+    _, oferta_id = _crear_solicitud_y_oferta(db_pruebas)
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "conductor_id": OTRO_CONDUCTOR_ID,
+        "cliente_id": CLIENTE_ID_AJENO,
         "accion": "ACEPTAR",
     })
     assert respuesta.status_code == 403
 
 
-def test_responder_oferta_ya_respondida():
-    _, oferta_id = _crear_solicitud_y_oferta()
+def test_responder_oferta_ya_respondida(db_pruebas):
+    _, oferta_id = _crear_solicitud_y_oferta(db_pruebas)
 
     client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "conductor_id": CONDUCTOR_ID,
+        "cliente_id": CLIENTE_ID,
         "accion": "ACEPTAR",
     })
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "conductor_id": CONDUCTOR_ID,
+        "cliente_id": CLIENTE_ID,
         "accion": "RECHAZAR",
     })
     assert respuesta.status_code == 409
 
 
-def test_responder_oferta_accion_invalida():
-    _, oferta_id = _crear_solicitud_y_oferta()
+def test_responder_oferta_accion_invalida(db_pruebas):
+    _, oferta_id = _crear_solicitud_y_oferta(db_pruebas)
 
     respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
-        "conductor_id": CONDUCTOR_ID,
+        "cliente_id": CLIENTE_ID,
         "accion": "IGNORAR",
     })
     assert respuesta.status_code == 422
+
+
+def test_responder_oferta_expirada(db_pruebas):
+    from datetime import datetime, timezone, timedelta
+    from app.models.oferta import Oferta
+
+    _, oferta_id = _crear_solicitud_y_oferta(db_pruebas)
+
+    oferta = db_pruebas.get(Oferta, oferta_id)
+    oferta.fecha_expiracion = datetime.now(timezone.utc) - timedelta(seconds=60)
+    db_pruebas.commit()
+
+    respuesta = client.patch(f"/ofertas/{oferta_id}/respuesta", json={
+        "cliente_id": CLIENTE_ID,
+        "accion": "ACEPTAR",
+    })
+    assert respuesta.status_code == 409
