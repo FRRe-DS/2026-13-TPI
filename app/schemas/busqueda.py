@@ -20,6 +20,16 @@ class ResultadoBusquedaM4(BaseModel):
     generado_en: datetime
 
 
+class ResultadoReservaM4(BaseModel):
+    """Respuesta de M4 al reservar o liberar un conductor."""
+    conductor_id: UUID
+    solicitud_id: UUID
+    estado_temporal: Literal["RESERVADO", "LIBERADO"]
+    actualizado_en: datetime
+    expira_en: Optional[datetime] = None
+    idempotente: Optional[bool] = None
+
+
 class RespuestaBusqueda(BaseModel):
     """Lo que devuelve M5 al iniciar la búsqueda de candidatos (RF-5.3)."""
     mensaje: str
