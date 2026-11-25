@@ -1,47 +1,62 @@
-import os
-
 import pytest
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.database import obtener_db
 from app.main import app
 from app.models.solicitud import Base
 
-load_dotenv()
+# Base de datos SQLite en memoria para tests aislados
+SQLITE_DATABASE_URL = "sqlite:///:memory:"
 
-TEST_DATABASE_URL = URL.create(
-    drivername="mysql+pymysql",
-    username=os.getenv("MYSQL_USER", "m5_user"),
-    password=os.getenv("MYSQL_PASSWORD"),
-    host="127.0.0.1",
-    port=3307,
-    database="m5_test_db"
+test_engine = create_engine(
+    SQLITE_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
+TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
-test_engine = create_engine(TEST_DATABASE_URL)
-TestSessionLocal = sessionmaker(bind=test_engine)
+
+@pytest.fixture(autouse=True)
+def inicializar_tablas():
+    """Crea todas las tablas antes de cada test y las elimina al finalizar."""
+    Base.metadata.create_all(bind=test_engine)
+    yield
+    Base.metadata.drop_all(bind=test_engine)
 
 
 @pytest.fixture
 def db_pruebas():
-    Base.metadata.create_all(bind=test_engine)
-
-    conexion = test_engine.connect()
-    transaccion = conexion.begin()
-    sesion = TestSessionLocal(bind=conexion)
-
-    def obtener_db_pruebas():
-        yield sesion
-
-    app.dependency_overrides[obtener_db] = obtener_db_pruebas
-
+    sesion = TestSessionLocal()
+    app.dependency_overrides[obtener_db] = lambda: sesion
     try:
         yield sesion
     finally:
         app.dependency_overrides.pop(obtener_db, None)
         sesion.close()
-        transaccion.rollback()
-        conexion.close()
+
+
+@pytest.fixture
+def concurrencia_db(tmp_path):
+    """Base SQLite en archivo: cada request usa su propia sesión y conexión."""
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'concurrencia.db'}",
+        connect_args={"check_same_thread": False, "timeout": 30},
+    )
+    Base.metadata.create_all(bind=engine)
+    SesionConcurrente = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def obtener_db_concurrente():
+        sesion = SesionConcurrente()
+        try:
+            yield sesion
+        finally:
+            sesion.close()
+
+    app.dependency_overrides[obtener_db] = obtener_db_concurrente
+    try:
+        yield SesionConcurrente
+    finally:
+        app.dependency_overrides.pop(obtener_db, None)
+        engine.dispose()

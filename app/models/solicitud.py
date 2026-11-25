@@ -17,7 +17,12 @@ class Solicitud(Base):
         String(36), primary_key=True, default=lambda: str(uuid4())
     )
 
-    cliente_id: Mapped[str] = mapped_column(String(36))
+    # para idempotencia (evitar reservas duplicadas)
+    reserva_id: Mapped[str | None] = mapped_column(
+        String(36), unique=True, nullable=True
+    )
+
+    cliente_id: Mapped[str] = mapped_column(String(36), nullable=True)
 
     origen_latitud: Mapped[float] = mapped_column(Float)
     origen_longitud: Mapped[float] = mapped_column(Float)
@@ -35,3 +40,10 @@ class Solicitud(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
     )
+
+    fecha_asignacion: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    conductor_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+

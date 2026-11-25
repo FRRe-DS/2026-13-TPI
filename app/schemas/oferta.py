@@ -12,6 +12,15 @@ class EstadoOferta(str, Enum):
     vencida = "vencida"
     cancelada = "cancelada"
 
+from typing import Optional, Literal
+from pydantic import BaseModel, ConfigDict
+
+
+class OfertaCreate(BaseModel):
+    id_solicitud: str
+    conductor_id: str
+    tiempo_expiracion_seg: Optional[int] = 30
+
 
 class OfertaResponse(BaseModel):
     oferta_id: UUID
@@ -39,3 +48,14 @@ class LoteOfertasM3(BaseModel):
     tipo_vehiculo: str
     ofertas: List[ItemOfertaM3] = Field(..., min_length=1)
     vence_en: datetime
+class RespuestaOfertaRequest(BaseModel):
+    cliente_id: str
+    accion: Literal["ACEPTAR", "RECHAZAR"]
+
+
+class RespuestaOfertaResponse(BaseModel):
+    id_oferta: str
+    id_solicitud: str
+    estado_oferta: str
+    estado_solicitud: str
+    mensaje: str
