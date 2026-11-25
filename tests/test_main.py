@@ -43,7 +43,7 @@ def test_crear_solicitud(db_pruebas):
 
     resultado = respuesta.json()
     assert resultado["mensaje"] == "Solicitud creada correctamente"
-    assert resultado["estado"] == "PENDIENTE"
+    assert resultado["estado"] == "pendiente"
 
     solicitud_id = resultado["solicitud_id"]
     assert str(UUID(solicitud_id)) == solicitud_id
@@ -56,7 +56,7 @@ def test_crear_solicitud(db_pruebas):
     assert solicitud_guardada.destino_latitud == datos["destino_latitud"]
     assert solicitud_guardada.destino_longitud == datos["destino_longitud"]
     assert solicitud_guardada.tipo_vehiculo == datos["tipo_vehiculo"]
-    assert solicitud_guardada.estado == "PENDIENTE"
+    assert solicitud_guardada.estado == "pendiente"
 
 
 def test_rechazar_tipo_vehiculo_invalido():
@@ -174,11 +174,11 @@ def test_cancelacion_previa_exitosa(db_pruebas):
 
     resultado = res_cancelar.json()
     assert resultado["solicitud_id"] == solicitud_id
-    assert resultado["estado"] == "CANCELADA"
+    assert resultado["estado"] == "cancelada"
 
     solicitud_guardada = db_pruebas.get(Solicitud, solicitud_id)
     assert solicitud_guardada is not None
-    assert solicitud_guardada.estado == "CANCELADA"
+    assert solicitud_guardada.estado == "cancelada"
 
 
 def test_cancelacion_solicitud_no_existente():

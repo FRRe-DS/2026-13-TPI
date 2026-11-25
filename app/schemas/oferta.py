@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -12,12 +13,9 @@ class EstadoOferta(str, Enum):
     vencida = "vencida"
     cancelada = "cancelada"
 
-from typing import Optional, Literal
-from pydantic import BaseModel, ConfigDict
-
 
 class OfertaCreate(BaseModel):
-    id_solicitud: str
+    solicitud_id: str
     conductor_id: str
     tiempo_expiracion_seg: Optional[int] = 30
 
@@ -48,14 +46,16 @@ class LoteOfertasM3(BaseModel):
     tipo_vehiculo: str
     ofertas: List[ItemOfertaM3] = Field(..., min_length=1)
     vence_en: datetime
+
+
 class RespuestaOfertaRequest(BaseModel):
-    cliente_id: str
-    accion: Literal["ACEPTAR", "RECHAZAR"]
+    """Cuerpo enviado por M3 al responder una oferta (RF-5.5)."""
+    solicitud_id: str
+    oferta_id: str
+    conductor_id: str
+    respuesta: Literal["aceptado", "rechazado"]
 
 
-class RespuestaOfertaResponse(BaseModel):
-    id_oferta: str
-    id_solicitud: str
-    estado_oferta: str
-    estado_solicitud: str
-    mensaje: str
+class ResultadoRespuestaOferta(BaseModel):
+    """repetida=true si la misma respuesta ya estaba registrada."""
+    repetida: bool
