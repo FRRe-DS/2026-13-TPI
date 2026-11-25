@@ -32,8 +32,9 @@ class Solicitud(Base):
 
     tipo_vehiculo: Mapped[str] = mapped_column(String(20))
 
+    # Estados: pendiente | buscando | asignada | cancelada | sin_disponibilidad
     estado: Mapped[str] = mapped_column(
-        String(30), default="PENDIENTE"
+        String(30), default="pendiente"
     )
 
     fecha_creacion: Mapped[datetime] = mapped_column(

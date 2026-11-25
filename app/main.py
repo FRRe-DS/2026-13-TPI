@@ -1,13 +1,14 @@
-from uuid import UUID
 from typing import Literal, Optional
-from fastapi import FastAPI, Depends, HTTPException, status
+from uuid import UUID
+
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponse
 
 from app.database import obtener_db
 from app.models.solicitud import Solicitud
-from app.routers import oferta, busqueda
+from app.routers import busqueda, oferta
 
 
 app = FastAPI(
@@ -18,6 +19,14 @@ app = FastAPI(
 
 app.include_router(oferta.router)
 app.include_router(busqueda.router)
+
+
+# Propaga el dict de detail directamente para respuestas application/problem+json
+@app.exception_handler(HTTPException)
+async def problema_handler(request: Request, exc: HTTPException):
+    if isinstance(exc.detail, dict):
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 class SolicitudViaje(BaseModel):
@@ -80,7 +89,8 @@ def crear_solicitud(
         origen_longitud=solicitud.origen_longitud,
         destino_latitud=solicitud.destino_latitud,
         destino_longitud=solicitud.destino_longitud,
-        tipo_vehiculo=solicitud.tipo_vehiculo
+        tipo_vehiculo=solicitud.tipo_vehiculo,
+        estado="pendiente",
     )
 
     db.add(nueva_solicitud)
@@ -129,7 +139,7 @@ def crear_solicitud_desde_reserva(
         destino_latitud=datos.destino_latitud,
         destino_longitud=datos.destino_longitud,
         tipo_vehiculo=datos.tipo_vehiculo,
-        estado="PENDIENTE"
+        estado="pendiente",
     )
 
     db.add(nueva_solicitud)
@@ -168,13 +178,13 @@ def cancelar_solicitud_previa(
             detail="No tiene permisos para cancelar una solicitud que no le pertenece."
         )
 
-    if solicitud.estado != "PENDIENTE":
+    if solicitud.estado not in ("pendiente", "buscando"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"No se puede cancelar la solicitud porque su estado actual es '{solicitud.estado}'."
         )
 
-    solicitud.estado = "CANCELADA"
+    solicitud.estado = "cancelada"
     db.commit()
     db.refresh(solicitud)
 

@@ -63,7 +63,7 @@ def test_crear_solicitud_desde_reserva_exitosa(db_pruebas):
 
     resultado = respuesta.json()
     assert resultado["mensaje"] == "Solicitud desde reserva creada correctamente"
-    assert resultado["estado"] == "PENDIENTE"
+    assert resultado["estado"] == "pendiente"
     assert resultado["reserva_id"] == RESERVA_ID
 
     solicitud_id = resultado["solicitud_id"]
@@ -74,7 +74,7 @@ def test_crear_solicitud_desde_reserva_exitosa(db_pruebas):
     assert solicitud_guardada is not None
     assert solicitud_guardada.reserva_id == RESERVA_ID
     assert solicitud_guardada.cliente_id == CLIENTE_ID
-    assert solicitud_guardada.estado == "PENDIENTE"
+    assert solicitud_guardada.estado == "pendiente"
 
 
 def test_evitar_solicitudes_duplicadas_misma_reserva(db_pruebas):
