@@ -1,36 +1,42 @@
-from uuid import UUID
-from typing import Literal, Optional
-from fastapi import FastAPI, Depends, HTTPException, status
-from pydantic import BaseModel, Field, ConfigDict
-from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponse
+import asyncio
+import hashlib
+import logging
 
-from app.database import obtener_db
-from app.models.solicitud import Solicitud
-from app.routers import oferta, busqueda
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime
+from typing import Literal, Optional
+from uuid import UUID
+
+from fastapi import (
+    FastAPI, Depends, HTTPException, status,
+    Header, Response, BackgroundTasks
+)
+from fastapi.responses import JSONResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from pydantic import BaseModel, Field, ConfigDict
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+
+from app.database import obtener_db, SessionLocal
+from app.models.solicitud import Solicitud
+from app.models.evento_notificacion import EventoNotificacion
+from app.routers import oferta, busqueda
+
 # Autenticación y autorización mediante M1 (Keycloak).
 from app.auth import validar_cliente, obtener_token_servicio
 from app.services.clientes import validar_estado_cuenta
-
-import hashlib
-from fastapi import Header, Response
-from sqlalchemy.exc import IntegrityError
 from app.services.estimacion import consultar_distancia, consultar_tarifa
-from app.models.evento_notificacion import EventoNotificacion
+from app.services.busqueda import iniciar_busqueda
 from app.services.notificaciones import (
     construir_evento_viaje_solicitado,
     procesar_evento,
     reintentar_eventos_pendientes
 )
-import logging
-import asyncio
-from contextlib import asynccontextmanager, suppress
-from fastapi import BackgroundTasks
-from app.database import SessionLocal
-from app.services.busqueda import iniciar_busqueda
 
 logger = logging.getLogger(__name__)
+
+
 async def tarea_notificaciones():
 
     while True:
@@ -41,8 +47,6 @@ async def tarea_notificaciones():
         await asyncio.to_thread(
             reintentar_eventos_pendientes
         )
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
@@ -64,6 +68,24 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+FastAPIInstrumentor.instrument_app(app)
+
+
+@app.get("/health", tags=["Salud"])
+def health_check():
+    return {"status": "ok"}
+
+
+@app.get("/health/ready", tags=["Salud"])
+def readiness_check(db: Session = Depends(obtener_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ready", "database": "connected"}
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Base de datos no disponible",
+        )
 
 app.include_router(oferta.router, prefix="/api/v1")
 app.include_router(busqueda.router, prefix="/api/v1")
