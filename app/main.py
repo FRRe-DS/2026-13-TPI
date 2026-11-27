@@ -1,20 +1,40 @@
-from uuid import UUID
 from typing import Literal, Optional
-from fastapi import FastAPI, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from uuid import UUID
+
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from pydantic import BaseModel, Field
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app.database import obtener_db
 from app.models.solicitud import Solicitud
-from app.routers import oferta, busqueda
-
+from app.routers import busqueda, oferta
 
 app = FastAPI(
     title="API M5 - Solicitud y Despacho",
     description="Servicio de solicitudes y asignacion de conductores",
     version="0.1.0"
 )
+FastAPIInstrumentor.instrument_app(app)
+
+
+@app.get("/health", tags=["Salud"])
+def health_check():
+    return {"status": "ok"}
+
+
+@app.get("/health/ready", tags=["Salud"])
+def readiness_check(db: Session = Depends(obtener_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ready", "database": "connected"}
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Base de datos no disponible",
+        )
 
 app.include_router(oferta.router)
 app.include_router(busqueda.router)

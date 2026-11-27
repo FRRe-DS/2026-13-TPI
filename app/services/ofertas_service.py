@@ -1,19 +1,14 @@
 from datetime import datetime, timedelta, timezone
 from typing import List
 from sqlalchemy.orm import Session
-from opentelemetry import metrics
 
 from app.models.oferta import Oferta
 from app.models.solicitud import Solicitud
 from app.schemas.oferta import ItemOfertaM3, LoteOfertasM3
-
+from app.observability.metricas import registrar_oferta_finalizada
 PLAZO_OFERTA_SEGUNDOS = 30
 
-meter = metrics.get_meter("m5.despacho")
-ofertas_finalizadas_counter = meter.create_counter(
-    name="m5.ofertas.finalizadas",
-    description="Cantidad de ofertas finalizadas por desenlace",
-)
+
 
 
 def emitir_lote_ofertas(
@@ -72,7 +67,5 @@ def procesar_ofertas_vencidas(db: Session) -> int:
     db.commit()
 
     # Métrica 3 de DevOps: registrar desenlace vencida tras el commit
-    ofertas_finalizadas_counter.add(
-        len(vencidas), {"resultado": "vencida", "m5.impl": "G13"}
-    )
+    registrar_oferta_finalizada("vencida", cantidad=len(vencidas))
     return len(vencidas)

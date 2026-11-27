@@ -1,0 +1,77 @@
+================================================================================
+GUIA DE INSTRUMENTACION DE METRICAS DEVOPS (M5 - GRUPO 13)
+================================================================================
+
+REGLA GENERAL:
+Todas las funciones de metricas deben llamarse INMEDIATAMENTE DESPUES de
+ejecutar `db.commit()`, para asegurar que solo se contabilicen cambios que
+quedaron guardados en MySQL.
+
+Importacion necesaria en el router o servicio:
+    from app.observability.metricas import (
+        registrar_tiempo_asignacion,
+        registrar_solicitud_cerrada,
+        registrar_oferta_finalizada,
+    )
+
+--------------------------------------------------------------------------------
+1. RF-5.4 - Oferta con vencimiento (YA IMPLEMENTADO en ofertas_service.py)
+--------------------------------------------------------------------------------
+Cuando el proceso marca ofertas pendientes como "vencida" tras los 30 segundos:
+
+    db.commit()
+    registrar_oferta_finalizada("vencida", cantidad=len(vencidas))
+
+--------------------------------------------------------------------------------
+2. RF-5.5 y RF-5.6 - Responder oferta y Asignacion unica (asignacion.py)
+--------------------------------------------------------------------------------
+A) Cuando el conductor RECHAZA una oferta:
+    db.commit()
+    registrar_oferta_finalizada("rechazada")
+
+B) Cuando el conductor ACEPTA una oferta y gana la asignacion:
+    # Calcular segundos transcurridos desde que se creo la solicitud
+    # (asegurarse de que solicitud.creada_en tenga zona horaria UTC)
+    ahora = datetime.now(timezone.utc)
+    creada = solicitud.creada_en
+    if creada.tzinfo is None:
+        creada = creada.replace(tzinfo=timezone.utc)
+    demora_segundos = (ahora - creada).total_seconds()
+
+    db.commit()
+
+    registrar_tiempo_asignacion(demora_segundos)
+    registrar_solicitud_cerrada("asignada")
+    registrar_oferta_finalizada("aceptada")
+
+    # Si al asignarse se cancelaron otras ofertas pendientes de esa solicitud:
+    if cantidad_ofertas_hermanas_canceladas > 0:
+        registrar_oferta_finalizada("cancelada", cantidad=cantidad_ofertas_hermanas_canceladas)
+
+Nota sobre codigos HTTP en POST /ofertas/{oferta_id}/responder:
+- Si la solicitud ya fue asignada o cancelada -> devolver HTTP 409.
+- Si la oferta ya expiro (> 30s) -> devolver HTTP 410.
+(DevOps excluye 409 y 410 de los errores HTTP porque son competencia normal).
+
+--------------------------------------------------------------------------------
+3. RF-5.7 - Cancelacion previa por el cliente (solicitud.py)
+--------------------------------------------------------------------------------
+Cuando el cliente cancela su solicitud antes de que sea asignada:
+
+    db.commit()
+    registrar_solicitud_cerrada("cancelada")
+
+    # Si habia ofertas pendientes enviadas para esa solicitud que pasaron a cancelada:
+    if cantidad_ofertas_pendientes_canceladas > 0:
+        registrar_oferta_finalizada("cancelada", cantidad=cantidad_ofertas_pendientes_canceladas)
+
+--------------------------------------------------------------------------------
+4. RF-5.3 y RF-5.8 - Busqueda sin disponibilidad / Reintentos agotados
+--------------------------------------------------------------------------------
+Cuando M4 no devuelve conductores o se agotan las rondas de oferta y la
+solicitud cierra como "sin_disponibilidad":
+
+    db.commit()
+    registrar_solicitud_cerrada("sin_disponibilidad")
+
+================================================================================
