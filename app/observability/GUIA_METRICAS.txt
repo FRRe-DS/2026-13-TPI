@@ -12,7 +12,27 @@ Importacion necesaria en el router o servicio:
         registrar_tiempo_asignacion,
         registrar_solicitud_cerrada,
         registrar_oferta_finalizada,
+        registrar_solicitud_creada,
     )
+--------------------------------------------------------------------------------
+0. RF-5.1 y RF-5.2 - Registro de solicitudes nuevas
+--------------------------------------------------------------------------------
+Cuando se registra exitosamente una nueva solicitud:
+
+RF-5.1 - Solicitud inmediata:
+
+    db.commit()
+    registrar_solicitud_creada("inmediata", solicitud.tipo_vehiculo)
+
+RF-5.2 - Solicitud desde reserva:
+
+    db.commit()
+    registrar_solicitud_creada("reserva", solicitud.tipo_vehiculo)
+
+IMPORTANTE:
+- Registrar únicamente solicitudes nuevas persistidas correctamente.
+- No contabilizar solicitudes existentes devueltas por idempotencia.
+- El tipo de vehículo se normaliza a minúsculas dentro de metricas.py.
 
 --------------------------------------------------------------------------------
 1. RF-5.4 - Oferta con vencimiento (YA IMPLEMENTADO en ofertas_service.py)

@@ -15,6 +15,12 @@ solicitudes_cerradas_counter = _meter.create_counter(
     description="Cantidad de solicitudes finalizadas por estado terminal",
 )
 
+# Métrica 2: Cantidad de solicitudes creadas (Contador)
+solicitudes_creadas_counter = _meter.create_counter(
+    name="m5.solicitudes.creadas",
+    description="Cantidad de solicitudes registradas exitosamente",
+)
+
 # Métrica 3: Desenlace final de ofertas (Contador)
 ofertas_finalizadas_counter = _meter.create_counter(
     name="m5.ofertas.finalizadas",
@@ -45,3 +51,22 @@ def registrar_oferta_finalizada(resultado: str, cantidad: int = 1) -> None:
         ofertas_finalizadas_counter.add(
             cantidad, {"resultado": resultado, "m5.impl": "G13"}
         )
+
+def registrar_solicitud_creada(origen: str, tipo_vehiculo: str) -> None:
+    """
+    Registra la creación exitosa de una solicitud.
+
+    Origen: 'inmediata' o 'reserva'.
+    Tipo de vehículo: 'auto' o 'moto'.
+
+    Debe invocarse después de confirmar la persistencia
+    de una nueva solicitud mediante db.commit().
+    """
+    solicitudes_creadas_counter.add(
+        1,
+        {
+            "m5.impl": "G13",
+            "origen": origen,
+            "tipo_vehiculo": tipo_vehiculo.lower(),
+        },
+    )
