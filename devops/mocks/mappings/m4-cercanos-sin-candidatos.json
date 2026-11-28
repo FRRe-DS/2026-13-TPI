@@ -4,13 +4,16 @@
   "request": {
     "method": "GET",
     "urlPath": "/api/v1/conductores/cercanos",
-    "headers": {
-      "X-Request-Id": { "matches": ".+" }
-    },
     "queryParameters": {
-      "origen_latitud": { "matches": "-?[0-9]+(\\.[0-9]+)?" },
-      "origen_longitud": { "matches": "-?[0-9]+(\\.[0-9]+)?" },
-      "tipo_vehiculo": { "equalTo": "MOTO" }
+      "origen_latitud": {
+        "matches": "-?[0-9]+(\\.[0-9]+)?"
+      },
+      "origen_longitud": {
+        "matches": "-?[0-9]+(\\.[0-9]+)?"
+      },
+      "tipo_vehiculo": {
+        "equalTo": "MOTO"
+      }
     }
   },
   "response": {
@@ -25,6 +28,8 @@
       "radio_aplicado_km": 9.5,
       "generado_en": "2026-10-20T15:04:06Z"
     },
-    "transformers": ["response-template"]
+    "transformers": [
+      "response-template"
+    ]
   }
 }

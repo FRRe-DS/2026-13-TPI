@@ -5,7 +5,9 @@
     "method": "GET",
     "urlPath": "/api/v1/conductores/cercanos",
     "queryParameters": {
-      "origen_latitud": { "equalTo": "-27.0" }
+      "origen_latitud": {
+        "equalTo": "-27.0"
+      }
     }
   },
   "response": {

@@ -21,7 +21,7 @@ devops/
 │   └── lib/
 │       ├── api.js             adaptador de la API de G13 (lo único que cambia entre repos)
 │       └── mocks.js           consultas al mock para verificar las llamadas a otros módulos
-└── mocks/mappings/            mocks de M1, M2, M4 y M8 (WireMock) armados desde los contratos oficiales
+└── mocks/mappings/            mocks de los módulos dependientes (WireMock), iguales en G04
 ```
 
 ## Pipeline (`ci.yml`)
@@ -69,7 +69,8 @@ simultáneas**, para verificar que una sola gana (RNF-08).
 ### Mocks de los módulos dependientes
 
 Un único WireMock atiende a todos los módulos, cada uno en sus rutas del contrato oficial
-(`2026-TPI/contratos/`):
+(`2026-TPI/contratos/`). Son los mismos archivos en G04 y G13; cada implementación usa los que
+necesita. Los que usa G13 hoy:
 
 | Módulo | Ruta | Respuesta |
 |---|---|---|
@@ -79,8 +80,11 @@ Un único WireMock atiende a todos los módulos, cada uno en sus rutas del contr
 | M4 | `GET /api/v1/conductores/cercanos` | `AUTO`: 2 candidatos · `MOTO`: lista vacía · `origen_latitud=-27.0`: 503 |
 | M8 | `POST /api/v1/eventos` | 202 |
 
-Los tokens de cliente los firma `devops/ci/m1_tokens_prueba.py` con una clave RSA que se genera
-en cada corrida y se descarta al terminar: no hay secretos en el repo.
+También están los de M4 (estimación de ruta y reserva), M6 (crear viaje), M7 (tarifa) y M3
+(acordado en el consorcio A, lo usa G04): ver `devops/README.md` en el repo de G04.
+
+Los tokens de prueba los firma `devops/ci/m1_tokens_prueba.py` con una clave RSA que se genera en
+cada corrida y se descarta al terminar: no hay secretos en el repo.
 
 ## Correrlo localmente
 

@@ -16,6 +16,8 @@ Escribe en la salida estándar (formato KEY=VALOR):
     M1_CLIENTE_ID        sub del cliente de prueba
     M1_TOKEN_CLIENTE     token con rol CLIENTE
     M1_TOKEN_SIN_ROL     token válido pero sin rol CLIENTE (para probar el 403)
+    M1_TOKEN_M3          token de servicio de M3: rol SERVICIO y scope m5:offers:respond
+                         (con él M3 responde las ofertas en nombre del conductor)
 """
 
 import argparse
@@ -56,7 +58,7 @@ def publicar_jwks(mock: str, issuer: str, jwk: dict) -> None:
     print(f"JWKS publicado en {mock}{ruta}", file=sys.stderr)
 
 
-def firmar(clave, issuer: str, audience: str, sub: str, roles: list) -> str:
+def firmar(clave, issuer: str, audience: str, sub: str, roles: list, scope: str = "") -> str:
     ahora = int(time.time())
     payload = {
         "iss": issuer,
@@ -67,6 +69,8 @@ def firmar(clave, issuer: str, audience: str, sub: str, roles: list) -> str:
         "email": "cliente.ci@example.com",
         "realm_access": {"roles": roles},
     }
+    if scope:
+        payload["scope"] = scope
     return jwt.encode(payload, clave, algorithm="RS256", headers={"kid": KID})
 
 
@@ -90,6 +94,7 @@ def main() -> int:
     print(f"M1_CLIENTE_ID={cliente_id}")
     print(f"M1_TOKEN_CLIENTE={firmar(clave, issuer, audience, cliente_id, ['CLIENTE'])}")
     print(f"M1_TOKEN_SIN_ROL={firmar(clave, issuer, audience, str(uuid.uuid4()), ['CONDUCTOR'])}")
+    print(f"M1_TOKEN_M3={firmar(clave, issuer, audience, 'm3-conductores', ['SERVICIO'], 'm5:offers:respond')}")
     return 0
 
 
