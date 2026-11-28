@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from app.observability.metricas import registrar_solicitud_creada
 
 from app.database import obtener_db, SessionLocal
 from app.models.solicitud import Solicitud
@@ -290,8 +291,14 @@ def crear_solicitud(
 
             db.add(evento)
 
-            # Confirma la solicitud y el evento en una misma transacción.
             db.commit()
+
+            # Métrica DevOps: contabilizar únicamente solicitudes nuevas persistidas.
+            registrar_solicitud_creada(
+                origen="inmediata",
+                tipo_vehiculo=solicitud.tipo_vehiculo,
+            )
+
             db.refresh(nueva_solicitud)
             resultado = nueva_solicitud
 

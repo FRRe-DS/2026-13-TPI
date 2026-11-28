@@ -415,3 +415,35 @@ def test_idempotency_key_ausente(cliente_api):
     )
 
     assert respuesta.status_code == 400
+
+def test_metrica_solicitud_creada(cliente_api, monkeypatch):
+    llamadas = []
+
+    # Simulamos la función de métricas para verificar sus invocaciones.
+    def registrar_metrica(origen, tipo_vehiculo):
+        llamadas.append((origen, tipo_vehiculo))
+
+    monkeypatch.setattr(
+        "app.main.registrar_solicitud_creada",
+        registrar_metrica,
+    )
+
+    # Primera solicitud: debe contabilizarse.
+    respuesta = cliente_api.post(
+        "/api/v1/solicitudes",
+        json=DATOS_VIAJE,
+        headers=HEADERS,
+    )
+
+    assert respuesta.status_code == 201
+    assert llamadas == [("inmediata", "AUTO")]
+
+    # Solicitud repetida: no debe contabilizarse nuevamente.
+    respuesta = cliente_api.post(
+        "/api/v1/solicitudes",
+        json=DATOS_VIAJE,
+        headers=HEADERS,
+    )
+
+    assert respuesta.status_code == 200
+    assert len(llamadas) == 1
