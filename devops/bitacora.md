@@ -224,4 +224,47 @@ Stack tecnológico:
 | Dificultad o bloqueo | Branch RF-5.5 con conflictos contra `main`. Hallazgos para G13: una solicitud inmediata no se puede cancelar, porque la búsqueda automática la saca de `PENDIENTE` enseguida; `desde-reserva` y `cancelar` no piden autenticación; M4 se configura con dos variables distintas (`M4_URL` y `M4_BASE_URL`) |
 | Siguiente acción | G13 mergea RF-5.5. DevOps arregla los 8 tests restantes, suma la aceptación concurrente al E2E y abre el PR del CI |
 
+### 27/11/2026 - Pipeline de CI en G04
+
+- Se confirmó que el equipo tiene permisos de administrador en el repositorio de G04 (hasta ahora
+  figuraba como solo lectura), así que se trabaja con una branch `devops/ci` en el mismo
+  repositorio, sin fork.
+- En `main` de G04 pasan 154 de 170 tests. Se revisó cada una de las 16 fallas contra el código y su
+  historial, y ninguna es un error de la app:
+  - 7 de los avisos a M3, M4 y M6: cambió el formato de los avisos y los tests no se actualizaron.
+    El cuerpo hacia M4 sigue el contrato oficial; el de M3 es un contrato acordado en el consorcio,
+    que no está en el repositorio de la cátedra.
+  - 3 que esperaban un solo aviso a M6: desde el 25/11, al repetir una aceptación M5 vuelve a llamar
+    a M6 para recuperar el `tripId` que necesita M3, con la misma clave de idempotencia (M6 no
+    duplica el viaje).
+  - 1 del outbox de M8: se sacó el `conductorId` del evento porque el contrato oficial de M8 no
+    admite campos extra.
+  - 4 de seguridad (3 de ellas en cadena): ahora solo M3, con su permiso de servicio, puede
+    responder ofertas, y los tests seguían armando el router con el modelo anterior.
+  - 1 por el nombre de un archivo: `src/clientes/ClienteM8.js` se importaba como `clienteM8`. En
+    Windows funciona, pero en Linux no, por eso solo lo detecta un CI.
+- Siguiendo la política de tests del 27/11, DevOps actualizó los tests y renombró el archivo. Los
+  tests de seguridad pasaron al modelo real sin perder lo que protegen: siguen verificando que sin
+  el permiso de M3 o con una oferta ajena la respuesta es 403. Pasan los 171 tests.
+- Se agregó el script `npm test` y el workflow `.github/workflows/ci.yml` con los jobs `build`,
+  `unit-tests`, `sast` (CodeQL para JavaScript) y `secrets` (gitleaks), con la misma estructura que
+  el de G13.
+- gitleaks encuentra 6 hallazgos en el código actual: 3 son falsos positivos (valores de relleno y
+  un test), que se excluyeron en `devops/ci/gitleaks.toml`, y 3 son secretos reales en los
+  `.env.example`. El job `secrets` queda en rojo hasta que G04 los rote.
+- `e2e` y `docker` van en un segundo PR: G04 no tiene Dockerfile, y el E2E necesita aplicar su
+  esquema de Prisma sobre MySQL, un reemplazo de Keycloak y mocks de M3, M4, M6, M8 y M9.
+
+| Campo | Detalle |
+|---|---|
+| Responsable/s | Fidanza, Felipe · Jerez, Fabricio E. · Urturi, Renzo O. |
+| Módulo | M5 (G04) |
+| Objetivo | Tener CI en el repositorio de G04 con la misma estructura que en G13 |
+| Decisiones/acuerdos | Branch en el repositorio de G04 (permisos de administrador confirmados). Política de tests aplicada: DevOps actualiza los tests desfasados. Los secretos reales no se excluyen: el job falla hasta que G04 los rote. CI en dos PR: primero build, unitarios, SAST y secretos; después E2E y Docker |
+| Repositorio/issue/PR | G04, branch `devops/ci` (PR a abrir) |
+| Evidencia | Tests en `main` (`f52f0e2`): 154/170 → 171/171 con los arreglos. gitleaks: 6 hallazgos, 3 reales (`.env.example:65`, `front/.env.example:8` y `:11`) |
+| Resultado | Línea base de tests en verde en G04. Pipeline listo para el PR, con `secrets` en rojo por los secretos commiteados |
+| Dificultad o bloqueo | Los secretos están en el historial de git: además de reemplazarlos hay que rotarlos. El contrato con M3 no se puede validar contra el repositorio de la cátedra |
+| Siguiente acción | Abrir el PR en G04, pedirle a G04 que rote los secretos y armar el segundo PR con E2E y Docker |
+
 ## Carga y cierre
