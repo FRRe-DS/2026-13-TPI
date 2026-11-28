@@ -218,8 +218,8 @@ Stack tecnológico:
 | Módulo | M5 (G13) |
 | Objetivo | Adaptar el CI a los cambios de G13 y definir cómo se tratan los tests rotos |
 | Decisiones/acuerdos | Política de tests: la primera vez DevOps arregla los tests desactualizados y deja la línea base en verde; desde ahí, cada regresión es un issue para el grupo. G13 mergea su branch de RF-5.5 para arreglar el código de ofertas |
-| Repositorio/issue/PR | G13, branch `devops/ci` (PR a abrir): `tests/test_rf_5_3.py` y CI actualizado |
-| Evidencia | Tests en `main`: 38/62 → 43/62 con el arreglo; `test_rf_5_3.py`: 13/13. Branch RF-5.5 sola: 53/53. E2E local: 45/45 verificaciones en verde |
+| Repositorio/issue/PR | G13, PR #14 (https://github.com/FRRe-DS/2026-13-TPI/pull/14), branch `devops/ci`, commit `7afbcd4` |
+| Evidencia | Primera ejecución del CI (https://github.com/FRRe-DS/2026-13-TPI/actions/runs/46090534488): `build`, `e2e`, `sast`, `secrets` y `docker` en verde; CodeQL sin alertas nuevas; `unit-tests` en rojo con 19 fallas ya existentes en `main` (43/62 pasan; antes del arreglo, 38/62). `test_rf_5_3.py`: 13/13. Branch RF-5.5 sola: 53/53 |
 | Resultado | G13 ya implementó las tres métricas y los health checks. E2E al día con RF-5.1. Quedan 19 fallas: 11 del código de ofertas y 8 tests que se arreglan después del merge de RF-5.5 |
 | Dificultad o bloqueo | Branch RF-5.5 con conflictos contra `main`. Hallazgos para G13: una solicitud inmediata no se puede cancelar, porque la búsqueda automática la saca de `PENDIENTE` enseguida; `desde-reserva` y `cancelar` no piden autenticación; M4 se configura con dos variables distintas (`M4_URL` y `M4_BASE_URL`) |
 | Siguiente acción | G13 mergea RF-5.5. DevOps arregla los 8 tests restantes, suma la aceptación concurrente al E2E y abre el PR del CI |
