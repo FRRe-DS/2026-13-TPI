@@ -43,17 +43,21 @@ def _respuesta_m4(conductores, radio=5):
     })
 
 
-def _crear_solicitud():
-    res = client.post("/solicitudes", json={
-        "cliente_id": CLIENTE_ID,
-        "origen_latitud": -27.4512,
-        "origen_longitud": -58.9866,
-        "destino_latitud": -27.4601,
-        "destino_longitud": -58.9735,
-        "tipo_vehiculo": "AUTO",
-    })
-    assert res.status_code == 201
-    return res.json()["solicitud_id"]
+def _crear_solicitud(db):
+    # La solicitud se crea directo en la base, en estado PENDIENTE: estos tests
+    # prueban RF-5.3. Crearla por POST /api/v1/solicitudes (RF-5.1) ahora exige
+    # token de M1, consulta a M2 y dispara la búsqueda sola en segundo plano.
+    solicitud = Solicitud(
+        cliente_id=CLIENTE_ID,
+        origen_latitud=-27.4512,
+        origen_longitud=-58.9866,
+        destino_latitud=-27.4601,
+        destino_longitud=-58.9735,
+        tipo_vehiculo="AUTO",
+    )
+    db.add(solicitud)
+    db.commit()
+    return solicitud.solicitud_id
 
 
 def _estados_del_historial(db, solicitud_id):
@@ -78,9 +82,9 @@ def test_busqueda_devuelve_candidatos_ordenados_y_compatibles(db_pruebas, monkey
         ], radio=6.5)
 
     monkeypatch.setattr(clientes_m4, "buscar_candidatos", m4_falso)
-    solicitud_id = _crear_solicitud()
+    solicitud_id = _crear_solicitud(db_pruebas)
 
-    respuesta = client.post(f"/solicitudes/{solicitud_id}/busqueda")
+    respuesta = client.post(f"/api/v1/solicitudes/{solicitud_id}/busqueda")
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
@@ -99,9 +103,9 @@ def test_busqueda_sin_conductores_deja_sin_disponibilidad(db_pruebas, monkeypatc
         clientes_m4, "buscar_candidatos",
         lambda *args, **kwargs: _respuesta_m4([], radio=9.5),
     )
-    solicitud_id = _crear_solicitud()
+    solicitud_id = _crear_solicitud(db_pruebas)
 
-    respuesta = client.post(f"/solicitudes/{solicitud_id}/busqueda")
+    respuesta = client.post(f"/api/v1/solicitudes/{solicitud_id}/busqueda")
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
@@ -117,9 +121,9 @@ def test_error_de_m4_no_se_toma_como_lista_vacia(db_pruebas, monkeypatch):
         raise ErrorIntegracionM4("M4 no respondió a tiempo (timeout) tras 3 intentos")
 
     monkeypatch.setattr(clientes_m4, "buscar_candidatos", m4_caido)
-    solicitud_id = _crear_solicitud()
+    solicitud_id = _crear_solicitud(db_pruebas)
 
-    respuesta = client.post(f"/solicitudes/{solicitud_id}/busqueda")
+    respuesta = client.post(f"/api/v1/solicitudes/{solicitud_id}/busqueda")
 
     assert respuesta.status_code == 503
     assert db_pruebas.get(Solicitud, solicitud_id).estado == "buscando"
@@ -127,19 +131,19 @@ def test_error_de_m4_no_se_toma_como_lista_vacia(db_pruebas, monkeypatch):
 
 
 def test_busqueda_de_solicitud_inexistente():
-    respuesta = client.post(f"/solicitudes/{SOLICITUD_INEXISTENTE}/busqueda")
+    respuesta = client.post(f"/api/v1/solicitudes/{SOLICITUD_INEXISTENTE}/busqueda")
     assert respuesta.status_code == 404
 
 
-def test_busqueda_no_se_puede_iniciar_dos_veces(monkeypatch):
+def test_busqueda_no_se_puede_iniciar_dos_veces(db_pruebas, monkeypatch):
     monkeypatch.setattr(
         clientes_m4, "buscar_candidatos",
         lambda *args, **kwargs: _respuesta_m4([_candidato(CONDUCTOR_A, 0.5)]),
     )
-    solicitud_id = _crear_solicitud()
+    solicitud_id = _crear_solicitud(db_pruebas)
 
-    primera = client.post(f"/solicitudes/{solicitud_id}/busqueda")
-    segunda = client.post(f"/solicitudes/{solicitud_id}/busqueda")
+    primera = client.post(f"/api/v1/solicitudes/{solicitud_id}/busqueda")
+    segunda = client.post(f"/api/v1/solicitudes/{solicitud_id}/busqueda")
 
     assert primera.status_code == 200
     assert segunda.status_code == 409
@@ -150,12 +154,12 @@ def test_busqueda_acepta_estado_pendiente_en_minuscula(db_pruebas, monkeypatch):
         clientes_m4, "buscar_candidatos",
         lambda *args, **kwargs: _respuesta_m4([_candidato(CONDUCTOR_A, 0.5)]),
     )
-    solicitud_id = _crear_solicitud()
+    solicitud_id = _crear_solicitud(db_pruebas)
     solicitud = db_pruebas.get(Solicitud, solicitud_id)
     solicitud.estado = "pendiente"
     db_pruebas.commit()
 
-    respuesta = client.post(f"/solicitudes/{solicitud_id}/busqueda")
+    respuesta = client.post(f"/api/v1/solicitudes/{solicitud_id}/busqueda")
 
     assert respuesta.status_code == 200
     assert respuesta.json()["estado"] == "buscando"
